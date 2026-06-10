@@ -1,0 +1,43 @@
+{
+  "nextMatch": {
+    "date": "2025-06-15",
+    "time": "09:00",
+    "location": "Campo Society do Tonão — Av. das Palmeiras, 320",
+    "opponent": "Veteranos do Bairro Novo",
+    "competition": "Copa Amigos da Bola — Rodada 5"
+  },
+  "sponsors": [
+    {
+      "id": "1",
+      "name": "Açougue do Gordo",
+      "tagline": "O melhor churrasco pós-jogo",
+      "contact": "(11) 99999-1234",
+      "logoText": "AG",
+      "color": "#B91C1C"
+    },
+    {
+      "id": "2",
+      "name": "Bar do Seu Zico",
+      "tagline": "Cerveja gelada e TV do jogo",
+      "contact": "(11) 98888-5678",
+      "logoText": "BZ",
+      "color": "#B45309"
+    },
+    {
+      "id": "3",
+      "name": "Loja do Esporte Total",
+      "tagline": "Uniformes e chuteiras sob medida",
+      "contact": "(11) 97777-9012",
+      "logoText": "ET",
+      "color": "#1D4ED8"
+    },
+    {
+      "id": "4",
+      "name": "Gráfica Campeão",
+      "tagline": "Faixas, banners e camisas",
+      "contact": "(11) 96666-3456",
+      "logoText": "GC",
+      "color": "#065F46"
+    }
+  ]
+}
