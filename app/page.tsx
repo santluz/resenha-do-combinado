@@ -1,7 +1,3 @@
-// app/page.tsx
-// Página principal — orquestra todas as seções com dados mockados
-// Estrutura preparada para futura integração com Firebase Firestore
-
 import HeroSection from "@/app/components/HeroSection";
 import LatestResenha from "@/app/components/LatestResenha";
 import InterviewsGrid from "@/app/components/InterviewsGrid";
@@ -11,24 +7,46 @@ import Sponsors from "@/app/components/Sponsors";
 import AboutProject from "@/app/components/AboutProject";
 import Footer from "@/app/components/Footer";
 
-// Dados mockados — substituir por chamadas ao Firebase quando integrar
-// Exemplo Firebase: const interviews = await getDocs(collection(db, "interviews"))
-import interviewsData from "@/data/interviews.json";
-import latestResenhaData from "@/data/latest-resenha.json";
-import galleryData from "@/data/gallery.json";
-import matchSponsorsData from "@/data/match-sponsors.json";
+import {
+  getLatestResenha,
+  getInterviews,
+  getGallery,
+  getNextMatch,
+  getSponsors,
+} from "@/lib/firestore";
+
+import interviewsFallback from "@/data/interviews.json";
+import latestResenhaFallback from "@/data/latest-resenha.json";
+import galleryFallback from "@/data/gallery.json";
+import matchSponsorsFallback from "@/data/match-sponsors.json";
 
 import type { Interview, LatestResenha as LatestResenhaType, GalleryPhoto } from "@/types";
 
-export default function Home() {
+export const revalidate = 60;
+
+export default async function Home() {
+  const [resenha, interviews, gallery, nextMatch, sponsors] = await Promise.all([
+    getLatestResenha().catch(() => null),
+    getInterviews().catch(() => []),
+    getGallery().catch(() => []),
+    getNextMatch().catch(() => null),
+    getSponsors().catch(() => []),
+  ]);
+
+  const resenhaData = resenha ?? (latestResenhaFallback as LatestResenhaType);
+  const interviewsData = interviews.length > 0 ? interviews : (interviewsFallback as Interview[]);
+  const galleryData = gallery.length > 0 ? gallery : (galleryFallback as GalleryPhoto[]);
+  const nextMatchData = nextMatch ?? matchSponsorsFallback.nextMatch;
+  const sponsorsData = sponsors.length > 0 ? sponsors : matchSponsorsFallback.sponsors;
+
   return (
     <main>
       <HeroSection />
-      <LatestResenha data={latestResenhaData as LatestResenhaType} />
-      <InterviewsGrid interviews={interviewsData as Interview[]} />
-      <GameGallery photos={galleryData as GalleryPhoto[]} />
-      <NextMatch match={matchSponsorsData.nextMatch} />
-      <Sponsors sponsors={matchSponsorsData.sponsors} />
+      <LatestResenha data={resenhaData} />
+      <InterviewsGrid interviews={interviewsData} />
+      <GameGallery photos={galleryData} />
+      <NextMatch match={nextMatchData} />
+      <Sponsors sponsors={sponsorsData} />
       <AboutProject />
       <Footer />
     </main>

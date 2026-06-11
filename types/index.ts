@@ -1,17 +1,15 @@
-// types/index.ts
-// Tipos centralizados — preparados para integração futura com Firebase
-
 export interface Interview {
-  id: string;
+  id?: string;
   name: string;
   role: string;
-  date: string; // ISO: "YYYY-MM-DD"
+  date: string;
   thumbnail: string;
   youtubeId: string;
   description: string;
 }
 
 export interface LatestResenha {
+  id?: string;
   youtubeId: string;
   title: string;
   date: string;
@@ -24,10 +22,11 @@ export interface LatestResenha {
 }
 
 export interface GalleryPhoto {
-  id: string;
+  id?: string;
   src: string;
   alt: string;
   date: string;
+  storagePath?: string;
 }
 
 export interface NextMatch {
@@ -39,10 +38,10 @@ export interface NextMatch {
 }
 
 export interface Sponsor {
-  id: string;
+  id?: string;
   name: string;
   tagline: string;
   contact: string;
-  logoText: string; // Iniciais exibidas enquanto não há logo real
-  color: string;    // Cor de fundo do placeholder do logo
+  logoText: string;
+  color: string;
 }
