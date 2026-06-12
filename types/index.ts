@@ -4,14 +4,16 @@ export interface Interview {
   name: string;
   role: string;
   date: string;
-  thumbnail: string;   // URL da imagem (Google Fotos, Imgur, etc.)
-  youtubeId: string;   // ID do YouTube
+  thumbnail: string;
+  youtubeId: string;
+  videoUrl?: string;     // URL do Cloudinary (vídeo próprio)
   description: string;
 }
 
 export interface LatestResenha {
   id?: string;
   youtubeId: string;
+  videoUrl?: string;     // URL do Cloudinary (vídeo próprio)
   title: string;
   date: string;
   description: string;
@@ -24,7 +26,7 @@ export interface LatestResenha {
 
 export interface GalleryPhoto {
   id?: string;
-  src: string;   // URL da imagem (Google Fotos, Imgur, etc.)
+  src: string;
   alt: string;
   date: string;
 }

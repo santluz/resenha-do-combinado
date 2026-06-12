@@ -1,7 +1,7 @@
 "use client";
-// app/admin/page.tsx — Painel admin com links externos (sem Firebase Storage)
+// app/admin/page.tsx — Painel admin com upload direto via Cloudinary
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   getLatestResenha, saveResenha,
   getInterviews, addInterview, deleteInterview,
@@ -10,7 +10,21 @@ import {
   getSponsors, addSponsor, deleteSponsor,
   getSiteConfig, saveSiteConfig,
 } from "@/lib/firestore";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import type { Interview, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
+
+// ─── Barra de progresso ────────────────────────────────────────────────────────
+function ProgressBar({ pct, label }: { pct: number; label?: string }) {
+  if (pct <= 0 || pct >= 100) return null;
+  return (
+    <div className="mt-2">
+      <div className="w-full bg-[#222] rounded-full h-2">
+        <div className="bg-[#1A7A3A] h-2 rounded-full transition-all duration-200" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="text-[#555] text-xs mt-1">{label || `${pct}% enviado...`}</p>
+    </div>
+  );
+}
 
 // ─── Login ─────────────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
@@ -47,15 +61,13 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 }
 
 // ─── Componentes base ──────────────────────────────────────────────────────────
-function Section({ title, emoji, tip, children }: { title: string; emoji: string; tip?: string; children: React.ReactNode }) {
+function Section({ title, emoji, children }: { title: string; emoji: string; children: React.ReactNode }) {
   return (
     <div className="bg-[#151515] border border-[#222] rounded-2xl p-6 mb-6">
-      <h2 className="text-white font-black text-xl uppercase mb-1 flex items-center gap-2"
+      <h2 className="text-white font-black text-xl uppercase mb-6 flex items-center gap-2"
         style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>
         {emoji} {title}
       </h2>
-      {tip && <p className="text-[#444] text-xs mb-6 leading-relaxed">{tip}</p>}
-      {!tip && <div className="mb-6" />}
       {children}
     </div>
   );
@@ -84,17 +96,43 @@ function SaveBtn({ loading, label = "Salvar" }: { loading: boolean; label?: stri
   return (
     <button type="submit" disabled={loading}
       className="bg-[#1A7A3A] hover:bg-[#15612F] disabled:opacity-50 text-white font-bold uppercase tracking-widest text-xs px-6 py-3 rounded-lg transition-colors">
-      {loading ? "Salvando..." : label}
+      {loading ? "Aguarde..." : label}
     </button>
   );
 }
 
-// Caixa de dica visual
-function TipBox({ children }: { children: React.ReactNode }) {
+// Botão de upload amigável para celular
+function UploadArea({
+  label, accept, multiple, onChange, preview, inputRef,
+}: {
+  label: string;
+  accept: string;
+  multiple?: boolean;
+  onChange: (files: FileList | null) => void;
+  preview?: string | null;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+}) {
   return (
-    <div className="bg-[#0D0D0D] border border-[#F5C518]/20 rounded-lg p-4 mb-4">
-      <p className="text-[#F5C518] text-xs font-bold uppercase tracking-widest mb-2">💡 Como funciona</p>
-      <div className="text-[#888] text-sm leading-relaxed space-y-1">{children}</div>
+    <div>
+      <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">{label}</label>
+      <button type="button" onClick={() => inputRef.current?.click()}
+        className="w-full bg-[#0D0D0D] border-2 border-dashed border-[#333] hover:border-[#1A7A3A] rounded-xl px-4 py-6 flex flex-col items-center gap-2 transition-colors group">
+        {preview ? (
+          <img src={preview} alt="preview" className="w-24 h-16 object-cover rounded-lg mb-1" />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-[#1A7A3A]/10 group-hover:bg-[#1A7A3A]/20 flex items-center justify-center transition-colors">
+            <svg className="w-6 h-6 text-[#1A7A3A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+          </div>
+        )}
+        <span className="text-[#666] group-hover:text-[#1A7A3A] text-sm transition-colors">
+          Toque para escolher da galeria ou tirar foto
+        </span>
+        <span className="text-[#444] text-xs">Celular, tablet ou computador</span>
+      </button>
+      <input ref={inputRef} type="file" accept={accept} multiple={multiple}
+        onChange={(e) => onChange(e.target.files)} className="hidden" />
     </div>
   );
 }
@@ -135,29 +173,68 @@ function ResenhaSection() {
     youtubeId: "", title: "", date: "", description: "",
     matchStats: { goals: "", opponent: "", location: "" },
   });
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [useYoutube, setUseYoutube] = useState(true);
+  const videoRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => { getLatestResenha().then((r) => { if (r) setData(r); }); }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true);
-    await saveResenha(data, (data as any).id);
+    e.preventDefault();
+    setLoading(true);
+    let finalData = { ...data };
+
+    if (!useYoutube && videoFile) {
+      setProgress(1);
+      const result = await uploadToCloudinary(videoFile, setProgress);
+      finalData = { ...finalData, youtubeId: "", videoUrl: result.url };
+    }
+
+    await saveResenha(finalData, (finalData as any).id);
+    setProgress(0); setVideoFile(null);
     setLoading(false); setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
+
   return (
     <Section title="Última Resenha" emoji="🎬">
-      <TipBox>
-        <p>1. Suba o vídeo no <strong className="text-white">YouTube</strong> (pode ser não listado)</p>
-        <p>2. Copie o link: <span className="text-[#F5C518]">youtube.com/watch?v=<strong>ABC123xyz</strong></span></p>
-        <p>3. Cole só o ID (<strong className="text-white">ABC123xyz</strong>) no campo abaixo</p>
-      </TipBox>
+      {/* Toggle YouTube / Upload */}
+      <div className="flex gap-3 mb-6">
+        <button type="button" onClick={() => setUseYoutube(true)}
+          className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors ${useYoutube ? "bg-[#1A7A3A] border-[#1A7A3A] text-white" : "bg-transparent border-[#333] text-[#666]"}`}>
+          📺 Usar YouTube
+        </button>
+        <button type="button" onClick={() => setUseYoutube(false)}
+          className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors ${!useYoutube ? "bg-[#1A7A3A] border-[#1A7A3A] text-white" : "bg-transparent border-[#333] text-[#666]"}`}>
+          📱 Enviar do Celular
+        </button>
+      </div>
+
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2">
-          <Input label="ID do YouTube"
-            tip="Só a parte depois de ?v= — ex: se o link é youtube.com/watch?v=ABC123 cole ABC123"
-            value={data.youtubeId}
-            onChange={(e) => setData({ ...data, youtubeId: e.target.value })} required />
-        </div>
+        {useYoutube ? (
+          <div className="md:col-span-2">
+            <Input label="ID do YouTube"
+              tip="Parte depois de ?v= no link do vídeo"
+              value={data.youtubeId || ""}
+              onChange={(e) => setData({ ...data, youtubeId: e.target.value })}
+              placeholder="Ex: ABC123xyz" required={useYoutube} />
+          </div>
+        ) : (
+          <div className="md:col-span-2">
+            <UploadArea label="Vídeo da Resenha (MP4 do celular)"
+              accept="video/*" onChange={(f) => setVideoFile(f?.[0] || null)}
+              inputRef={videoRef} preview={null} />
+            {videoFile && <p className="text-[#1A7A3A] text-xs mt-2">✓ {videoFile.name} pronto para envio</p>}
+            {(data as any).videoUrl && !videoFile && (
+              <p className="text-[#555] text-xs mt-2">Vídeo atual já enviado ✓</p>
+            )}
+            <ProgressBar pct={progress} label={`Enviando vídeo... ${progress}%`} />
+          </div>
+        )}
+
         <Input label="Título da Resenha" value={data.title}
           onChange={(e) => setData({ ...data, title: e.target.value })} required />
         <Input label="Data do Jogo" type="date" value={data.date}
@@ -175,7 +252,7 @@ function ResenhaSection() {
             onChange={(e) => setData({ ...data, description: e.target.value })} />
         </div>
         <div className="md:col-span-2 flex items-center gap-4">
-          <SaveBtn loading={loading} />
+          <SaveBtn loading={loading} label={loading && !useYoutube ? `Enviando ${progress}%...` : "Salvar"} />
           {saved && <span className="text-[#1A7A3A] text-sm">✓ Salvo!</span>}
         </div>
       </form>
@@ -189,61 +266,115 @@ function InterviewsSection() {
   const [form, setForm] = useState<Omit<Interview, "id">>({
     name: "", role: "", date: "", thumbnail: "", youtubeId: "", description: "",
   });
+  const [useYoutube, setUseYoutube] = useState(true);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [thumbFile, setThumbFile] = useState<File | null>(null);
+  const [thumbPreview, setThumbPreview] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
+  const videoRef = useRef<HTMLInputElement>(null);
+  const thumbRef = useRef<HTMLInputElement>(null);
+
   const load = () => getInterviews().then(setInterviews);
   useEffect(() => { load(); }, []);
+
+  const handleThumbChange = (files: FileList | null) => {
+    const file = files?.[0] || null;
+    setThumbFile(file);
+    if (file) setThumbPreview(URL.createObjectURL(file));
+  };
+
   const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true);
-    // Se não informou thumbnail, gera automaticamente pelo YouTube
-    const finalForm = {
-      ...form,
-      thumbnail: form.thumbnail || `https://img.youtube.com/vi/${form.youtubeId}/hqdefault.jpg`,
-    };
+    e.preventDefault();
+    setLoading(true);
+    let finalForm = { ...form };
+
+    // Upload do vídeo se necessário
+    if (!useYoutube && videoFile) {
+      setProgress(1);
+      const result = await uploadToCloudinary(videoFile, setProgress);
+      finalForm = { ...finalForm, youtubeId: "", videoUrl: result.url } as any;
+    }
+
+    // Upload da thumbnail
+    if (thumbFile) {
+      const result = await uploadToCloudinary(thumbFile);
+      finalForm = { ...finalForm, thumbnail: result.url };
+    } else if (useYoutube && form.youtubeId) {
+      finalForm = { ...finalForm, thumbnail: `https://img.youtube.com/vi/${form.youtubeId}/hqdefault.jpg` };
+    }
+
     await addInterview(finalForm);
     setForm({ name: "", role: "", date: "", thumbnail: "", youtubeId: "", description: "" });
+    setVideoFile(null); setThumbFile(null); setThumbPreview(null); setProgress(0);
     await load(); setLoading(false);
   };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Remover esta entrevista?")) return;
     await deleteInterview(id); await load();
   };
+
   return (
     <Section title="Entrevistas" emoji="🎙">
-      <TipBox>
-        <p>1. Suba a entrevista no <strong className="text-white">YouTube</strong> (pode ser não listado)</p>
-        <p>2. Cole o <strong className="text-white">ID do vídeo</strong> no campo abaixo</p>
-        <p>3. A foto de capa é gerada <strong className="text-white">automaticamente</strong> pelo YouTube — não precisa preencher</p>
-      </TipBox>
+      <div className="flex gap-3 mb-6">
+        <button type="button" onClick={() => setUseYoutube(true)}
+          className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors ${useYoutube ? "bg-[#1A7A3A] border-[#1A7A3A] text-white" : "bg-transparent border-[#333] text-[#666]"}`}>
+          📺 Usar YouTube
+        </button>
+        <button type="button" onClick={() => setUseYoutube(false)}
+          className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors ${!useYoutube ? "bg-[#1A7A3A] border-[#1A7A3A] text-white" : "bg-transparent border-[#333] text-[#666]"}`}>
+          📱 Enviar do Celular
+        </button>
+      </div>
+
       <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 pb-8 border-b border-[#222]">
         <Input label="Nome do Entrevistado" value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         <Input label="Posição / Função" value={form.role}
           onChange={(e) => setForm({ ...form, role: e.target.value })} required />
-        <Input label="ID do YouTube" value={form.youtubeId}
-          onChange={(e) => setForm({ ...form, youtubeId: e.target.value })}
-          placeholder="Ex: ABC123xyz" required />
         <Input label="Data" type="date" value={form.date}
           onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+
+        {useYoutube ? (
+          <div>
+            <Input label="ID do YouTube" value={form.youtubeId || ""}
+              onChange={(e) => setForm({ ...form, youtubeId: e.target.value })}
+              placeholder="Ex: ABC123xyz" required={useYoutube} />
+          </div>
+        ) : (
+          <div>
+            <UploadArea label="Vídeo da Entrevista" accept="video/*"
+              onChange={(f) => setVideoFile(f?.[0] || null)}
+              inputRef={videoRef} preview={null} />
+            {videoFile && <p className="text-[#1A7A3A] text-xs mt-1">✓ {videoFile.name}</p>}
+            <ProgressBar pct={progress} />
+          </div>
+        )}
+
         <div className="md:col-span-2">
-          <Input label="URL da foto de capa (opcional)"
-            tip="Deixe em branco para usar a miniatura automática do YouTube"
-            value={form.thumbnail}
-            onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
-            placeholder="https://..." />
+          <UploadArea label="Foto de Capa (opcional — gerada automaticamente se deixar vazio)"
+            accept="image/*" onChange={handleThumbChange}
+            inputRef={thumbRef} preview={thumbPreview} />
         </div>
+
         <div className="md:col-span-2">
           <Textarea label="Descrição curta" value={form.description} rows={2}
             onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </div>
         <div><SaveBtn loading={loading} label="Adicionar Entrevista" /></div>
       </form>
+
       <div className="space-y-3">
         {interviews.length === 0 && <p className="text-[#555] text-sm">Nenhuma entrevista cadastrada ainda.</p>}
         {interviews.map((iv) => (
           <div key={iv.id} className="flex items-center justify-between bg-[#0D0D0D] rounded-lg px-4 py-3 border border-[#1C1C1C]">
-            <div>
-              <p className="text-white font-semibold text-sm">{iv.name}</p>
-              <p className="text-[#555] text-xs">{iv.role} · {iv.date} · 📺 {iv.youtubeId}</p>
+            <div className="flex items-center gap-3">
+              {iv.thumbnail && <img src={iv.thumbnail} alt="" className="w-12 h-8 object-cover rounded" />}
+              <div>
+                <p className="text-white font-semibold text-sm">{iv.name}</p>
+                <p className="text-[#555] text-xs">{iv.role} · {iv.date}</p>
+              </div>
             </div>
             <button onClick={() => handleDelete(iv.id!)}
               className="text-red-500 hover:text-red-400 text-xs font-bold uppercase transition-colors">
@@ -259,18 +390,32 @@ function InterviewsSection() {
 // ─── Galeria ───────────────────────────────────────────────────────────────────
 function GallerySection() {
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
-  const [form, setForm] = useState({ src: "", alt: "" });
+  const [files, setFiles] = useState<FileList | null>(null);
+  const [alt, setAlt] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [current, setCurrent] = useState(0);
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const load = () => getGallery().then(setPhotos);
   useEffect(() => { load(); }, []);
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true);
-    await addPhoto({
-      src: form.src, alt: form.alt,
-      date: new Date().toISOString().split("T")[0],
-    });
-    setForm({ src: "", alt: "" });
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!files || files.length === 0) return;
+    setLoading(true);
+    for (let i = 0; i < files.length; i++) {
+      setCurrent(i + 1);
+      setProgress(0);
+      const result = await uploadToCloudinary(files[i], setProgress);
+      await addPhoto({
+        src: result.url,
+        alt: alt || `Foto ${i + 1}`,
+        date: new Date().toISOString().split("T")[0],
+      });
+    }
+    setAlt(""); setFiles(null); setProgress(0); setCurrent(0);
+    if (inputRef.current) inputRef.current.value = "";
     await load(); setLoading(false);
   };
 
@@ -281,31 +426,32 @@ function GallerySection() {
 
   return (
     <Section title="Galeria de Fotos" emoji="📷">
-      <TipBox>
-        <p><strong className="text-white">Google Fotos:</strong> abra a foto → compartilhar → copiar link</p>
-        <p><strong className="text-white">WhatsApp Web:</strong> salve a foto no PC → suba no <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" className="text-[#F5C518] underline">imgur.com</a> → copie o link direto</p>
-        <p><strong className="text-white">Dica:</strong> No Imgur clique com botão direito na imagem → "Copiar endereço da imagem"</p>
-      </TipBox>
+      <form onSubmit={handleUpload} className="grid grid-cols-1 gap-4 mb-6 pb-6 border-b border-[#222]">
+        <UploadArea
+          label="Fotos do Jogo — toque para abrir a câmera ou galeria (pode selecionar várias)"
+          accept="image/*" multiple
+          onChange={(f) => setFiles(f)}
+          inputRef={inputRef} preview={null} />
 
-      <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 mb-6 pb-6 border-b border-[#222]">
-        <Input label="URL da Foto"
-          tip="Cole o link direto da imagem (termina em .jpg, .png ou link do imgur/google fotos)"
-          value={form.src}
-          onChange={(e) => setForm({ ...form, src: e.target.value })}
-          placeholder="https://i.imgur.com/abc123.jpg" required />
-        <Input label="Legenda da foto"
-          value={form.alt}
-          onChange={(e) => setForm({ ...form, alt: e.target.value })}
-          placeholder="Ex: Gol do Marquinhos no segundo tempo" required />
-        {/* Preview da imagem */}
-        {form.src && (
-          <div>
-            <p className="text-[#666] text-xs uppercase tracking-widest mb-2">Preview</p>
-            <img src={form.src} alt="preview" className="w-32 h-20 object-cover rounded-lg border border-[#333]"
-              onError={(e) => (e.currentTarget.style.display = "none")} />
-          </div>
+        {files && files.length > 0 && (
+          <p className="text-[#1A7A3A] text-sm font-semibold">
+            ✓ {files.length} foto{files.length > 1 ? "s" : ""} selecionada{files.length > 1 ? "s" : ""}
+          </p>
         )}
-        <div><SaveBtn loading={loading} label="Adicionar Foto" /></div>
+
+        {loading && (
+          <ProgressBar pct={progress}
+            label={`Enviando foto ${current} de ${files?.length}... ${progress}%`} />
+        )}
+
+        <Input label="Legenda (opcional — vale para todas as fotos)"
+          value={alt} onChange={(e) => setAlt(e.target.value)}
+          placeholder="Ex: Jogo contra o Pelotão — 01/06/2025" />
+
+        <div>
+          <SaveBtn loading={loading}
+            label={loading ? `Enviando ${current}/${files?.length}...` : `Enviar ${files?.length || ""} Foto${(files?.length || 0) > 1 ? "s" : ""}`} />
+        </div>
       </form>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
