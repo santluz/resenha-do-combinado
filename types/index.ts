@@ -4,18 +4,14 @@ export interface Interview {
   name: string;
   role: string;
   date: string;
-  thumbnail: string;
-  youtubeId?: string;       // opcional — usado se não tiver vídeo próprio
-  videoUrl?: string;        // URL do vídeo no Firebase Storage
-  videoPath?: string;       // caminho no Storage para deletar
+  thumbnail: string;   // URL da imagem (Google Fotos, Imgur, etc.)
+  youtubeId: string;   // ID do YouTube
   description: string;
 }
 
 export interface LatestResenha {
   id?: string;
-  youtubeId?: string;       // ID YouTube OU...
-  videoUrl?: string;        // ...vídeo direto do Storage
-  videoPath?: string;
+  youtubeId: string;
   title: string;
   date: string;
   description: string;
@@ -28,10 +24,9 @@ export interface LatestResenha {
 
 export interface GalleryPhoto {
   id?: string;
-  src: string;
+  src: string;   // URL da imagem (Google Fotos, Imgur, etc.)
   alt: string;
   date: string;
-  storagePath?: string;
 }
 
 export interface NextMatch {

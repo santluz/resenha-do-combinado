@@ -1,6 +1,4 @@
 // components/LatestResenha.tsx
-// Suporta vídeo YouTube OU vídeo próprio do Firebase Storage
-
 import type { LatestResenha as LatestResenhaType } from "@/types";
 
 interface Props {
@@ -25,33 +23,19 @@ export default function LatestResenha({ data }: Props) {
         </div>
 
         <div className="grid lg:grid-cols-5 gap-10 items-start">
-          {/* Player — YouTube ou vídeo próprio */}
           <div className="lg:col-span-3">
             <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-[#0D0D0D] border border-[#222] shadow-2xl shadow-[#1A7A3A]/10">
-              {data.videoUrl ? (
-                // Vídeo próprio do Firebase Storage
-                <video
-                  src={data.videoUrl}
-                  controls
-                  playsInline
-                  className="absolute inset-0 w-full h-full object-cover"
-                  poster={undefined}
-                />
-              ) : (
-                // YouTube embed
-                <iframe
-                  src={`https://www.youtube.com/embed/${data.youtubeId}?rel=0&modestbranding=1`}
-                  title={data.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full"
-                  loading="lazy"
-                />
-              )}
+              <iframe
+                src={`https://www.youtube.com/embed/${data.youtubeId}?rel=0&modestbranding=1`}
+                title={data.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full"
+                loading="lazy"
+              />
             </div>
           </div>
 
-          {/* Info */}
           <div className="lg:col-span-2 flex flex-col justify-center">
             <div className="inline-flex items-center gap-2 mb-4">
               <span className="bg-[#1A7A3A] text-white text-xs font-bold uppercase tracking-widest px-3 py-1 rounded">
@@ -79,16 +63,13 @@ export default function LatestResenha({ data }: Props) {
 
             <p className="text-[#888] leading-relaxed text-base mb-8">{data.description}</p>
 
-            {/* Link YouTube apenas se for vídeo do YouTube */}
-            {data.youtubeId && !data.videoUrl && (
-              <a href={`https://youtube.com/watch?v=${data.youtubeId}`} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-[#F5C518] hover:text-white font-semibold text-sm uppercase tracking-widest transition-colors group">
-                Abrir no YouTube
-                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
-            )}
+            <a href={`https://youtube.com/watch?v=${data.youtubeId}`} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-[#F5C518] hover:text-white font-semibold text-sm uppercase tracking-widest transition-colors group">
+              Abrir no YouTube
+              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
           </div>
         </div>
       </div>
