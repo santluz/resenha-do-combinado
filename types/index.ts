@@ -1,16 +1,21 @@
+// types/index.ts
 export interface Interview {
   id?: string;
   name: string;
   role: string;
   date: string;
   thumbnail: string;
-  youtubeId: string;
+  youtubeId?: string;       // opcional — usado se não tiver vídeo próprio
+  videoUrl?: string;        // URL do vídeo no Firebase Storage
+  videoPath?: string;       // caminho no Storage para deletar
   description: string;
 }
 
 export interface LatestResenha {
   id?: string;
-  youtubeId: string;
+  youtubeId?: string;       // ID YouTube OU...
+  videoUrl?: string;        // ...vídeo direto do Storage
+  videoPath?: string;
   title: string;
   date: string;
   description: string;
@@ -44,4 +49,8 @@ export interface Sponsor {
   contact: string;
   logoText: string;
   color: string;
+}
+
+export interface SiteConfig {
+  instagram: string;
 }
