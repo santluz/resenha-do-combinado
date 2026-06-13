@@ -1,4 +1,6 @@
 // components/InterviewsGrid.tsx
+// Suporta entrevistas com vídeo YouTube ou vídeo próprio do Cloudinary
+
 import Image from "next/image";
 import type { Interview } from "@/types";
 
@@ -11,7 +13,12 @@ function InterviewCard({ interview }: { interview: Interview }) {
     day: "2-digit", month: "short", year: "numeric",
   });
 
-  const videoHref = `https://youtube.com/watch?v=${interview.youtubeId}`;
+  // Se tem vídeo próprio, abre direto; senão vai pro YouTube
+  const videoHref = interview.videoUrl
+    ? interview.videoUrl
+    : `https://youtube.com/watch?v=${interview.youtubeId}`;
+
+  const isOwnVideo = !!interview.videoUrl;
 
   const thumbSrc = interview.thumbnail
     ? interview.thumbnail
@@ -26,7 +33,7 @@ function InterviewCard({ interview }: { interview: Interview }) {
           <Image src={thumbSrc} alt={`Entrevista com ${interview.name}`} fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            unoptimized={thumbSrc.includes("youtube.com") || thumbSrc.includes("imgur")}
+            unoptimized={thumbSrc.includes("youtube.com")}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -43,18 +50,33 @@ function InterviewCard({ interview }: { interview: Interview }) {
         <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-[#F5C518] text-xs font-semibold px-2 py-1 rounded">
           {formattedDate}
         </div>
+        {/* Badge tipo de vídeo */}
+        <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
+          {isOwnVideo ? "📱" : "📺"}
+        </div>
       </div>
+
       <div className="p-5">
         <p className="text-[#1A7A3A] text-xs font-bold uppercase tracking-widest mb-1">{interview.role}</p>
         <h3 className="text-white font-bold text-lg leading-snug mb-2 group-hover:text-[#F5C518] transition-colors">
           {interview.name}
         </h3>
         <p className="text-[#666] text-sm leading-relaxed mb-5 line-clamp-2">{interview.description}</p>
-        <a href={videoHref} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-[#1A7A3A]/10 hover:bg-[#1A7A3A] border border-[#1A7A3A] text-[#1A7A3A] hover:text-white text-xs font-bold uppercase tracking-widest px-4 py-2.5 rounded transition-all duration-200">
-          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-          Assistir
-        </a>
+
+        {isOwnVideo ? (
+          // Vídeo próprio — abre num modal/player inline
+          <a href={videoHref} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-[#1A7A3A]/10 hover:bg-[#1A7A3A] border border-[#1A7A3A] text-[#1A7A3A] hover:text-white text-xs font-bold uppercase tracking-widest px-4 py-2.5 rounded transition-all duration-200">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+            Assistir
+          </a>
+        ) : (
+          <a href={videoHref} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-[#1A7A3A]/10 hover:bg-[#1A7A3A] border border-[#1A7A3A] text-[#1A7A3A] hover:text-white text-xs font-bold uppercase tracking-widest px-4 py-2.5 rounded transition-all duration-200">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+            Assistir
+          </a>
+        )}
       </div>
     </article>
   );
