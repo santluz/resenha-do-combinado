@@ -6,14 +6,24 @@ export interface Interview {
   date: string;
   thumbnail: string;
   youtubeId: string;
-  videoUrl?: string;     // URL do Cloudinary (vídeo próprio)
+  videoUrl?: string;
+  description: string;
+}
+
+export interface Highlight {
+  id?: string;
+  title: string;
+  date: string;
+  thumbnail?: string;
+  youtubeId?: string;
+  videoUrl?: string;
   description: string;
 }
 
 export interface LatestResenha {
   id?: string;
-  youtubeId: string;
-  videoUrl?: string;     // URL do Cloudinary (vídeo próprio)
+  youtubeId?: string;
+  videoUrl?: string;
   title: string;
   date: string;
   description: string;
@@ -35,8 +45,6 @@ export interface NextMatch {
   date: string;
   time: string;
   location: string;
-  opponent: string;
-  competition: string;
 }
 
 export interface Sponsor {
@@ -50,4 +58,7 @@ export interface Sponsor {
 
 export interface SiteConfig {
   instagram: string;
+  logoUrl?: string;
+  comunicado?: string;
+  comunicadoAtivo?: boolean;
 }

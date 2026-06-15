@@ -5,13 +5,14 @@ import { useState, useEffect, useRef } from "react";
 import {
   getLatestResenha, saveResenha,
   getInterviews, addInterview, deleteInterview,
+  getHighlights, addHighlight, deleteHighlight,
   getGallery, addPhoto, deletePhoto,
   getNextMatch, saveNextMatch,
   getSponsors, addSponsor, deleteSponsor,
   getSiteConfig, saveSiteConfig,
 } from "@/lib/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import type { Interview, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
+import type { Interview, Highlight, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
 
 // ─── Barra de progresso ────────────────────────────────────────────────────────
 function ProgressBar({ pct, label }: { pct: number; label?: string }) {
@@ -137,32 +138,190 @@ function UploadArea({
   );
 }
 
-// ─── Instagram ─────────────────────────────────────────────────────────────────
-function InstagramSection() {
-  const [config, setConfig] = useState<SiteConfig>({ instagram: "" });
+// ─── Configurações Gerais (Instagram + Logo + Comunicado) ─────────────────────
+function ConfigSection() {
+  const [config, setConfig] = useState<SiteConfig>({ instagram: "", logoUrl: "", comunicado: "", comunicadoAtivo: false });
   const [loading, setLoading] = useState(false);
+  const [logoLoading, setLogoLoading] = useState(false);
   const [saved, setSaved] = useState(false);
-  useEffect(() => { getSiteConfig().then(setConfig); }, []);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { getSiteConfig().then((c) => { setConfig(c); if (c.logoUrl) setLogoPreview(c.logoUrl); }); }, []);
+
+  const handleLogoChange = async (files: FileList | null) => {
+    const file = files?.[0]; if (!file) return;
+    setLogoLoading(true);
+    setLogoPreview(URL.createObjectURL(file));
+    const result = await uploadToCloudinary(file);
+    setConfig((prev) => ({ ...prev, logoUrl: result.url }));
+    setLogoLoading(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
     await saveSiteConfig(config);
     setLoading(false); setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
+
   return (
-    <Section title="Instagram do Grupo" emoji="📱">
-      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 items-end">
-        <div className="flex-1">
+    <Section title="Configurações do Site" emoji="⚙️">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
+        {/* Logo */}
+        <div>
+          <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">Logo do Grupo</label>
+          <div className="flex items-center gap-4">
+            {logoPreview ? (
+              <img src={logoPreview} alt="Logo" className="w-16 h-16 rounded-full object-cover border-2 border-red-600" />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-[#222] border-2 border-dashed border-[#444] flex items-center justify-center text-2xl">⚽</div>
+            )}
+            <button type="button" onClick={() => logoRef.current?.click()}
+              disabled={logoLoading}
+              className="bg-[#222] hover:bg-[#333] border border-[#444] text-white text-xs font-bold uppercase tracking-widest px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50">
+              {logoLoading ? "Enviando..." : "Escolher Logo"}
+            </button>
+            <input ref={logoRef} type="file" accept="image/*" onChange={(e) => handleLogoChange(e.target.files)} className="hidden" />
+          </div>
+        </div>
+
+        {/* Instagram */}
+        <div>
           <Input label="@ do Instagram (sem o @)" value={config.instagram}
             onChange={(e) => setConfig({ ...config, instagram: e.target.value.replace("@", "") })}
-            placeholder="grupocombinadofutebol" required />
+            placeholder="grupocombinadofutebol" />
           <p className="text-[#444] text-xs mt-1">Link: instagram.com/{config.instagram || "..."}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <SaveBtn loading={loading} />
-          {saved && <span className="text-[#1A7A3A] text-sm">✓ Salvo!</span>}
+
+        {/* Comunicado */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[#666] text-xs uppercase tracking-widest">Comunicado / Aviso</label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <span className="text-[#555] text-xs">{config.comunicadoAtivo ? "Ativo" : "Inativo"}</span>
+              <div
+                onClick={() => setConfig({ ...config, comunicadoAtivo: !config.comunicadoAtivo })}
+                className={`w-10 h-6 rounded-full transition-colors cursor-pointer ${config.comunicadoAtivo ? "bg-red-600" : "bg-[#333]"}`}>
+                <div className={`w-4 h-4 bg-white rounded-full m-1 transition-transform ${config.comunicadoAtivo ? "translate-x-4" : ""}`} />
+              </div>
+            </label>
+          </div>
+          <textarea
+            value={config.comunicado || ""}
+            onChange={(e) => setConfig({ ...config, comunicado: e.target.value })}
+            placeholder="Ex: Jogo cancelado por chuva — novo horário em breve!"
+            rows={2}
+            className="w-full bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors resize-none"
+          />
+          <p className="text-[#444] text-xs mt-1">Aparece como banner vermelho no topo do site quando ativo.</p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <SaveBtn loading={loading} label="Salvar Configurações" />
+          {saved && <span className="text-green-500 text-sm">✓ Salvo!</span>}
         </div>
       </form>
+    </Section>
+  );
+}
+
+// ─── Highlights / Melhores Momentos (máx 3) ───────────────────────────────────
+function HighlightsSection() {
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [form, setForm] = useState<Omit<Highlight, "id">>({ title: "", date: "", youtubeId: "", videoUrl: "", description: "" });
+  const [useYoutube, setUseYoutube] = useState(true);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const videoRef = useRef<HTMLInputElement>(null);
+
+  const load = () => getHighlights().then(setHighlights);
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (highlights.length >= 3) { alert("Máximo de 3 highlights atingido. Remova um antes de adicionar."); return; }
+    setLoading(true);
+    let finalForm = { ...form };
+    if (!useYoutube && videoFile) {
+      setProgress(1);
+      const result = await uploadToCloudinary(videoFile, setProgress);
+      finalForm = { ...finalForm, videoUrl: result.url, youtubeId: "" };
+    }
+    await addHighlight(finalForm);
+    setForm({ title: "", date: "", youtubeId: "", videoUrl: "", description: "" });
+    setVideoFile(null); setProgress(0);
+    await load(); setLoading(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Remover este highlight?")) return;
+    await deleteHighlight(id); await load();
+  };
+
+  return (
+    <Section title={`Melhores Momentos (${highlights.length}/3)`} emoji="🎯">
+      <div className="flex gap-3 mb-6">
+        <button type="button" onClick={() => setUseYoutube(true)}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors ${useYoutube ? "bg-red-600 border-red-600 text-white" : "bg-transparent border-[#333] text-[#666]"}`}>
+          📺 YouTube
+        </button>
+        <button type="button" onClick={() => setUseYoutube(false)}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors ${!useYoutube ? "bg-red-600 border-red-600 text-white" : "bg-transparent border-[#333] text-[#666]"}`}>
+          📱 Celular / Arquivo
+        </button>
+      </div>
+
+      <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 pb-8 border-b border-[#222]">
+        <Input label="Título do vídeo" value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+        <Input label="Data" type="date" value={form.date}
+          onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+
+        {useYoutube ? (
+          <div className="md:col-span-2">
+            <Input label="ID do YouTube" value={form.youtubeId || ""}
+              onChange={(e) => setForm({ ...form, youtubeId: e.target.value })}
+              placeholder="Ex: ABC123xyz" required={useYoutube} />
+          </div>
+        ) : (
+          <div className="md:col-span-2">
+            <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Vídeo do Celular</label>
+            <button type="button" onClick={() => videoRef.current?.click()}
+              className="w-full bg-[#0D0D0D] border-2 border-dashed border-[#333] hover:border-red-600 rounded-xl px-4 py-5 flex items-center justify-center gap-2 text-[#666] hover:text-red-500 text-sm transition-colors">
+              📱 Escolher vídeo da galeria
+            </button>
+            <input ref={videoRef} type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="hidden" />
+            {videoFile && <p className="text-red-400 text-xs mt-1">✓ {videoFile.name}</p>}
+            <ProgressBar pct={progress} label={`Enviando... ${progress}%`} />
+          </div>
+        )}
+
+        <div className="md:col-span-2">
+          <Textarea label="Descrição curta" value={form.description} rows={2}
+            onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        </div>
+        <div>
+          <SaveBtn loading={loading} label={highlights.length >= 3 ? "Limite atingido (3/3)" : "Adicionar Highlight"} />
+        </div>
+      </form>
+
+      <div className="space-y-3">
+        {highlights.length === 0 && <p className="text-[#555] text-sm">Nenhum highlight cadastrado.</p>}
+        {highlights.map((h) => (
+          <div key={h.id} className="flex items-center justify-between bg-[#0D0D0D] rounded-lg px-4 py-3 border border-[#1C1C1C]">
+            <div>
+              <p className="text-white font-semibold text-sm">{h.title}</p>
+              <p className="text-[#555] text-xs">{h.date} · {h.videoUrl ? "📱 vídeo próprio" : "📺 YouTube"}</p>
+            </div>
+            <button onClick={() => handleDelete(h.id!)}
+              className="text-red-500 hover:text-red-400 text-xs font-bold uppercase transition-colors">
+              Remover
+            </button>
+          </div>
+        ))}
+      </div>
     </Section>
   );
 }
@@ -472,7 +631,7 @@ function GallerySection() {
 
 // ─── Próximo Jogo ──────────────────────────────────────────────────────────────
 function NextMatchSection() {
-  const [data, setData] = useState<NextMatch>({ date: "", time: "", location: "", opponent: "", competition: "" });
+  const [data, setData] = useState<NextMatch>({ date: "", time: "", location: "" });
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   useEffect(() => { getNextMatch().then((m) => { if (m) setData(m); }); }, []);
@@ -487,19 +646,18 @@ function NextMatchSection() {
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input label="Data" type="date" value={data.date} onChange={(e) => setData({ ...data, date: e.target.value })} required />
         <Input label="Horário" type="time" value={data.time} onChange={(e) => setData({ ...data, time: e.target.value })} required />
-        <Input label="Adversário" value={data.opponent} onChange={(e) => setData({ ...data, opponent: e.target.value })} required />
-        <Input label="Competição" value={data.competition} onChange={(e) => setData({ ...data, competition: e.target.value })} />
         <div className="md:col-span-2">
           <Input label="Local" value={data.location} onChange={(e) => setData({ ...data, location: e.target.value })} required />
         </div>
         <div className="flex items-center gap-4">
           <SaveBtn loading={loading} />
-          {saved && <span className="text-[#1A7A3A] text-sm">✓ Salvo!</span>}
+          {saved && <span className="text-green-500 text-sm">✓ Salvo!</span>}
         </div>
       </form>
     </Section>
   );
 }
+
 
 // ─── Patrocinadores ────────────────────────────────────────────────────────────
 function SponsorsSection() {
@@ -579,8 +737,9 @@ export default function AdminPage() {
               className="text-[#555] hover:text-red-400 text-sm transition-colors">Sair</button>
           </div>
         </div>
-        <InstagramSection />
+        <ConfigSection />
         <ResenhaSection />
+        <HighlightsSection />
         <InterviewsSection />
         <GallerySection />
         <NextMatchSection />

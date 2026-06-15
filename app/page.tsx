@@ -1,6 +1,7 @@
-// app/page.tsx — dados reais do Firebase com fallback para JSONs mockados
+// app/page.tsx
 import HeroSection from "@/app/components/HeroSection";
 import LatestResenha from "@/app/components/LatestResenha";
+import Highlights from "@/app/components/Highlights";
 import InterviewsGrid from "@/app/components/InterviewsGrid";
 import GameGallery from "@/app/components/GameGallery";
 import NextMatch from "@/app/components/NextMatch";
@@ -8,47 +9,49 @@ import Sponsors from "@/app/components/Sponsors";
 import AboutProject from "@/app/components/AboutProject";
 import Footer from "@/app/components/Footer";
 import Navbar from "@/app/components/Navbar";
+import Comunicado from "@/app/components/Comunicado";
 
 import {
-  getLatestResenha, getInterviews, getGallery,
-  getNextMatch, getSponsors, getSiteConfig,
+  getLatestResenha, getInterviews, getHighlights,
+  getGallery, getNextMatch, getSponsors, getSiteConfig,
 } from "@/lib/firestore";
 
-import interviewsFallback from "@/data/interviews.json";
 import latestResenhaFallback from "@/data/latest-resenha.json";
-import galleryFallback from "@/data/gallery.json";
 import matchSponsorsFallback from "@/data/match-sponsors.json";
-import type { Interview, LatestResenha as LatestResenhaType, GalleryPhoto } from "@/types";
+import type { LatestResenha as LatestResenhaType } from "@/types";
 
 export const revalidate = 60;
 
 export default async function Home() {
-  const [resenha, interviews, gallery, nextMatch, sponsors, siteConfig] = await Promise.all([
+  const [resenha, interviews, highlights, gallery, nextMatch, sponsors, siteConfig] = await Promise.all([
     getLatestResenha().catch(() => null),
     getInterviews().catch(() => []),
+    getHighlights().catch(() => []),
     getGallery().catch(() => []),
     getNextMatch().catch(() => null),
     getSponsors().catch(() => []),
-    getSiteConfig().catch(() => ({ instagram: "resenhadocombinado" })),
+    getSiteConfig().catch(() => ({ instagram: "resenhadocombinado", logoUrl: undefined, comunicado: undefined, comunicadoAtivo: false })),
   ]);
 
   const resenhaData = resenha ?? (latestResenhaFallback as LatestResenhaType);
-  const interviewsData = interviews.length > 0 ? interviews : (interviewsFallback as Interview[]);
-  const galleryData = gallery.length > 0 ? gallery : (galleryFallback as GalleryPhoto[]);
   const nextMatchData = nextMatch ?? matchSponsorsFallback.nextMatch;
   const sponsorsData = sponsors.length > 0 ? sponsors : matchSponsorsFallback.sponsors;
   const instagram = siteConfig?.instagram || "resenhadocombinado";
+  const logoUrl = siteConfig?.logoUrl;
+  const comunicado = siteConfig?.comunicadoAtivo ? siteConfig?.comunicado || "" : "";
 
   return (
     <>
-      <Navbar instagram={instagram} />
+      <Navbar instagram={instagram} logoUrl={logoUrl} />
+      {comunicado && <Comunicado texto={comunicado} />}
       <main>
-        <HeroSection />
+        <HeroSection logoUrl={logoUrl} />
         <LatestResenha data={resenhaData} />
-        <InterviewsGrid interviews={interviewsData} />
-        <GameGallery photos={galleryData} />
+        {highlights.length > 0 && <Highlights highlights={highlights} />}
+        {interviews.length > 0 && <InterviewsGrid interviews={interviews} />}
+        {gallery.length > 0 && <GameGallery photos={gallery} />}
         <NextMatch match={nextMatchData} />
-        <Sponsors sponsors={sponsorsData} />
+        {sponsorsData.length > 0 && <Sponsors sponsors={sponsorsData} />}
         <AboutProject />
         <Footer instagram={instagram} />
       </main>

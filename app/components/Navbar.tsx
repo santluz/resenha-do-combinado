@@ -1,14 +1,14 @@
-// components/Navbar.tsx
-// Navbar com Instagram dinâmico
+// components/Navbar.tsx — com logo do grupo e cores vermelhas
 "use client";
-
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 interface Props {
   instagram: string;
+  logoUrl?: string;
 }
 
-export default function Navbar({ instagram }: Props) {
+export default function Navbar({ instagram, logoUrl }: Props) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const igHandle = instagram || "resenhadocombinado";
@@ -21,6 +21,7 @@ export default function Navbar({ instagram }: Props) {
 
   const links = [
     { label: "Última Resenha", href: "#ultima-resenha" },
+    { label: "Highlights", href: "#highlights" },
     { label: "Entrevistas", href: "#entrevistas" },
     { label: "Galeria", href: "#galeria" },
     { label: "Próximo Jogo", href: "#proximo-jogo" },
@@ -32,24 +33,33 @@ export default function Navbar({ instagram }: Props) {
       scrolled ? "bg-[#0D0D0D]/95 backdrop-blur-md border-b border-[#1C1C1C] shadow-lg" : "bg-transparent"
     }`}>
       <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* Logo */}
         <a href="#" className="flex items-center gap-2 group">
-          <span className="w-8 h-8 rounded-full bg-[#1A7A3A] flex items-center justify-center text-sm">⚽</span>
-          <span className="text-white font-black uppercase text-lg leading-none group-hover:text-[#1A7A3A] transition-colors"
+          {logoUrl ? (
+            <Image src={logoUrl} alt="Logo do grupo" width={36} height={36}
+              className="rounded-full object-cover" unoptimized />
+          ) : (
+            <span className="w-9 h-9 rounded-full bg-red-600 flex items-center justify-center text-sm">⚽</span>
+          )}
+          <span className="text-white font-black uppercase text-lg leading-none group-hover:text-red-500 transition-colors"
             style={{ fontFamily: "'Bebas Neue', 'Impact', sans-serif", letterSpacing: "0.05em" }}>
             Resenha
           </span>
         </a>
 
-        <ul className="hidden md:flex items-center gap-6">
+        {/* Links desktop */}
+        <ul className="hidden md:flex items-center gap-5">
           {links.map((link) => (
             <li key={link.label}>
-              <a href={link.href} className="text-[#666] hover:text-white text-xs font-semibold uppercase tracking-widest transition-colors duration-200">
+              <a href={link.href}
+                className="text-[#666] hover:text-white text-xs font-semibold uppercase tracking-widest transition-colors duration-200">
                 {link.label}
               </a>
             </li>
           ))}
         </ul>
 
+        {/* Instagram */}
         <a href={`https://instagram.com/${igHandle}`} target="_blank" rel="noopener noreferrer"
           className="hidden md:inline-flex items-center gap-2 text-[#888] hover:text-[#F5C518] text-xs font-bold uppercase tracking-widest transition-colors">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -58,8 +68,9 @@ export default function Navbar({ instagram }: Props) {
           Instagram
         </a>
 
+        {/* Menu mobile */}
         <button className="md:hidden text-[#888] hover:text-white p-1 transition-colors"
-          onClick={() => setMenuOpen((o) => !o)} aria-expanded={menuOpen} aria-label="Menu">
+          onClick={() => setMenuOpen((o) => !o)} aria-label="Menu">
           {menuOpen ? (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -74,7 +85,7 @@ export default function Navbar({ instagram }: Props) {
 
       {menuOpen && (
         <div className="md:hidden bg-[#0D0D0D]/98 backdrop-blur-md border-b border-[#1C1C1C]">
-          <ul className="max-w-6xl mx-auto px-6 py-4 flex flex-col gap-4">
+          <ul className="max-w-6xl mx-auto px-6 py-4 flex flex-col gap-3">
             {links.map((link) => (
               <li key={link.label}>
                 <a href={link.href} onClick={() => setMenuOpen(false)}

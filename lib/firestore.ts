@@ -1,12 +1,10 @@
 // lib/firestore.ts
-// Versão sem Firebase Storage — usa links externos (YouTube, Google Fotos, etc.)
-
 import {
   collection, doc, getDocs, getDoc, addDoc, updateDoc,
   deleteDoc, setDoc, query, orderBy, limit, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Interview, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
+import type { Interview, Highlight, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
 
 // ─── CONFIG DO SITE ───────────────────────────────────────────────────────────
 export async function getSiteConfig(): Promise<SiteConfig> {
@@ -34,9 +32,9 @@ export async function saveResenha(data: Omit<LatestResenha, "id">, id?: string) 
   }
 }
 
-// ─── ENTREVISTAS ──────────────────────────────────────────────────────────────
+// ─── ENTREVISTAS (máx 2) ──────────────────────────────────────────────────────
 export async function getInterviews(): Promise<Interview[]> {
-  const q = query(collection(db, "interviews"), orderBy("date", "desc"));
+  const q = query(collection(db, "interviews"), orderBy("date", "desc"), limit(2));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Interview));
 }
@@ -47,9 +45,22 @@ export async function deleteInterview(id: string) {
   await deleteDoc(doc(db, "interviews", id));
 }
 
-// ─── GALERIA ──────────────────────────────────────────────────────────────────
+// ─── HIGHLIGHTS / MELHORES MOMENTOS (máx 3) ──────────────────────────────────
+export async function getHighlights(): Promise<Highlight[]> {
+  const q = query(collection(db, "highlights"), orderBy("date", "desc"), limit(3));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Highlight));
+}
+export async function addHighlight(data: Omit<Highlight, "id">) {
+  await addDoc(collection(db, "highlights"), { ...data, createdAt: serverTimestamp() });
+}
+export async function deleteHighlight(id: string) {
+  await deleteDoc(doc(db, "highlights", id));
+}
+
+// ─── GALERIA (máx 6) ─────────────────────────────────────────────────────────
 export async function getGallery(): Promise<GalleryPhoto[]> {
-  const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"));
+  const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"), limit(6));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as GalleryPhoto));
 }
