@@ -1,6 +1,8 @@
+"use client";
 // components/InterviewsGrid.tsx
-// Suporta entrevistas com vídeo YouTube ou vídeo próprio do Cloudinary
+// Entrevistas com player vertical (estilo reels) para vídeos do Cloudinary
 
+import { useState } from "react";
 import Image from "next/image";
 import type { Interview } from "@/types";
 
@@ -8,17 +10,66 @@ interface Props {
   interviews: Interview[];
 }
 
+// ─── Player vertical em modal ──────────────────────────────────────────────────
+function VideoModal({ interview, onClose }: { interview: Interview; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      {/* Botão fechar */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/60 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-10"
+        aria-label="Fechar"
+      >
+        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      {/* Container vertical — estilo stories */}
+      <div
+        className="relative w-full max-w-sm mx-auto"
+        style={{ aspectRatio: "9/16", maxHeight: "85vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {interview.videoUrl ? (
+          <video
+            src={interview.videoUrl}
+            controls
+            autoPlay
+            playsInline
+            className="w-full h-full rounded-2xl object-cover bg-black"
+          />
+        ) : (
+          <iframe
+            src={`https://www.youtube.com/embed/${interview.youtubeId}?autoplay=1&rel=0`}
+            title={interview.name}
+            allowFullScreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            className="w-full h-full rounded-2xl"
+          />
+        )}
+
+        {/* Info sobre o vídeo */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-2xl">
+          <p className="text-red-400 text-xs font-bold uppercase tracking-widest mb-1">{interview.role}</p>
+          <p className="text-white font-bold text-base">{interview.name}</p>
+          <p className="text-white/60 text-xs mt-1">{interview.description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Card de entrevista ────────────────────────────────────────────────────────
 function InterviewCard({ interview }: { interview: Interview }) {
+  const [showModal, setShowModal] = useState(false);
+
   const formattedDate = new Date(interview.date + "T12:00:00").toLocaleDateString("pt-BR", {
     day: "2-digit", month: "short", year: "numeric",
   });
-
-  // Se tem vídeo próprio, abre direto; senão vai pro YouTube
-  const videoHref = interview.videoUrl
-    ? interview.videoUrl
-    : `https://youtube.com/watch?v=${interview.youtubeId}`;
-
-  const isOwnVideo = !!interview.videoUrl;
 
   const thumbSrc = interview.thumbnail
     ? interview.thumbnail
@@ -26,75 +77,96 @@ function InterviewCard({ interview }: { interview: Interview }) {
     ? `https://img.youtube.com/vi/${interview.youtubeId}/hqdefault.jpg`
     : null;
 
+  const handleClick = () => {
+    if (interview.videoUrl) {
+      // Vídeo próprio — abre modal vertical
+      setShowModal(true);
+    } else {
+      // YouTube — abre em nova aba
+      window.open(`https://youtube.com/watch?v=${interview.youtubeId}`, "_blank");
+    }
+  };
+
   return (
-    <article className="group bg-[#151515] border border-[#222] rounded-lg overflow-hidden hover:border-[#1A7A3A] transition-all duration-300 hover:shadow-lg hover:shadow-[#1A7A3A]/10 hover:-translate-y-1">
-      <div className="relative aspect-video overflow-hidden bg-[#0D0D0D]">
-        {thumbSrc ? (
-          <Image src={thumbSrc} alt={`Entrevista com ${interview.name}`} fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            unoptimized={thumbSrc.includes("youtube.com")}
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-4xl">🎙</span>
+    <>
+      <article className="group bg-[#151515] border border-[#222] rounded-lg overflow-hidden hover:border-red-600/50 transition-all duration-300 hover:shadow-lg hover:shadow-red-600/10 hover:-translate-y-1">
+        <div className="relative aspect-video overflow-hidden bg-[#0D0D0D]">
+          {thumbSrc ? (
+            <Image
+              src={thumbSrc}
+              alt={`Entrevista com ${interview.name}`}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              unoptimized={thumbSrc.includes("youtube.com") || thumbSrc.includes("cloudinary")}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-4xl">🎙</span>
+            </div>
+          )}
+
+          {/* Overlay play */}
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="w-14 h-14 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
+              <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
           </div>
-        )}
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="w-14 h-14 rounded-full bg-[#1A7A3A] flex items-center justify-center shadow-lg">
-            <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+
+          <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-[#F5C518] text-xs font-semibold px-2 py-1 rounded">
+            {formattedDate}
+          </div>
+          {/* Badge tipo */}
+          <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
+            {interview.videoUrl ? "📱 vertical" : "📺 YouTube"}
+          </div>
+        </div>
+
+        <div className="p-5">
+          <p className="text-red-500 text-xs font-bold uppercase tracking-widest mb-1">{interview.role}</p>
+          <h3 className="text-white font-bold text-lg leading-snug mb-2 group-hover:text-[#F5C518] transition-colors">
+            {interview.name}
+          </h3>
+          <p className="text-[#666] text-sm leading-relaxed mb-5 line-clamp-2">{interview.description}</p>
+
+          <button
+            onClick={handleClick}
+            className="inline-flex items-center gap-2 bg-red-600/10 hover:bg-red-600 border border-red-600 text-red-500 hover:text-white text-xs font-bold uppercase tracking-widest px-4 py-2.5 rounded transition-all duration-200"
+          >
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
             </svg>
-          </div>
-        </div>
-        <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-[#F5C518] text-xs font-semibold px-2 py-1 rounded">
-          {formattedDate}
-        </div>
-        {/* Badge tipo de vídeo */}
-        <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
-          {isOwnVideo ? "📱" : "📺"}
-        </div>
-      </div>
-
-      <div className="p-5">
-        <p className="text-[#1A7A3A] text-xs font-bold uppercase tracking-widest mb-1">{interview.role}</p>
-        <h3 className="text-white font-bold text-lg leading-snug mb-2 group-hover:text-[#F5C518] transition-colors">
-          {interview.name}
-        </h3>
-        <p className="text-[#666] text-sm leading-relaxed mb-5 line-clamp-2">{interview.description}</p>
-
-        {isOwnVideo ? (
-          // Vídeo próprio — abre num modal/player inline
-          <a href={videoHref} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-[#1A7A3A]/10 hover:bg-[#1A7A3A] border border-[#1A7A3A] text-[#1A7A3A] hover:text-white text-xs font-bold uppercase tracking-widest px-4 py-2.5 rounded transition-all duration-200">
-            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
             Assistir
-          </a>
-        ) : (
-          <a href={videoHref} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-[#1A7A3A]/10 hover:bg-[#1A7A3A] border border-[#1A7A3A] text-[#1A7A3A] hover:text-white text-xs font-bold uppercase tracking-widest px-4 py-2.5 rounded transition-all duration-200">
-            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-            Assistir
-          </a>
-        )}
-      </div>
-    </article>
+          </button>
+        </div>
+      </article>
+
+      {/* Modal player vertical */}
+      {showModal && (
+        <VideoModal interview={interview} onClose={() => setShowModal(false)} />
+      )}
+    </>
   );
 }
 
+// ─── Grid de entrevistas ───────────────────────────────────────────────────────
 export default function InterviewsGrid({ interviews }: Props) {
   return (
     <section id="entrevistas" className="bg-[#0D0D0D] py-20 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-4 mb-12">
-          <span className="text-[#F5C518] text-sm font-black uppercase tracking-[0.3em]"
-            style={{ fontFamily: "'Bebas Neue', 'Impact', sans-serif", fontSize: "1rem" }}>
-            🎙 Entrevistas Recentes
+          <span
+            className="text-[#F5C518] text-sm font-black uppercase tracking-[0.3em]"
+            style={{ fontFamily: "'Bebas Neue', 'Impact', sans-serif", fontSize: "1rem" }}
+          >
+            🎙 Entrevistas
           </span>
           <div className="flex-1 h-px bg-[#1C1C1C]" />
-          <span className="text-xs text-[#333] uppercase tracking-widest">{interviews.length} entrevistas</span>
+          <span className="text-xs text-[#333] uppercase tracking-widest">{interviews.length} entrevista{interviews.length !== 1 ? "s" : ""}</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {interviews.map((interview) => (
             <InterviewCard key={interview.id} interview={interview} />
           ))}

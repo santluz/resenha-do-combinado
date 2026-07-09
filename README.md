@@ -1,147 +1,36 @@
-# ⚽ Resenha do Combinado
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Landing page moderna para reunir entrevistas e momentos pós-jogo de grupos de futebol amador.
+## Getting Started
 
-**Stack:** Next.js 15 · React · TypeScript · Tailwind CSS · Vercel
-
----
-
-## 🚀 Deploy na Vercel (passo a passo)
-
-### 1. Suba o projeto para o GitHub
+First, run the development server:
 
 ```bash
-git init
-git add .
-git commit -m "feat: landing page Resenha do Combinado"
-git remote add origin https://github.com/SEU_USUARIO/resenha-do-combinado.git
-git push -u origin main
-```
-
-### 2. Conecte à Vercel
-
-1. Acesse [vercel.com](https://vercel.com) e faça login com GitHub
-2. Clique em **"Add New Project"**
-3. Selecione o repositório `resenha-do-combinado`
-4. Mantenha as configurações padrão (Next.js é detectado automaticamente)
-5. Clique em **"Deploy"**
-
-Pronto! O site fica ao vivo em poucos minutos com HTTPS gratuito.
-
----
-
-## 💻 Rodar localmente
-
-```bash
-# Instalar dependências
-npm install
-
-# Servidor de desenvolvimento
 npm run dev
-# Acesse: http://localhost:3000
-
-# Build de produção
-npm run build
-npm start
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
----
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## 📁 Estrutura do projeto
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-```
-resenha-do-combinado/
-├── app/
-│   ├── components/
-│   │   ├── Navbar.tsx          # Barra de navegação responsiva
-│   │   ├── HeroSection.tsx     # Banner principal
-│   │   ├── LatestResenha.tsx   # Último vídeo em destaque
-│   │   ├── InterviewsGrid.tsx  # Grade de entrevistas
-│   │   ├── GameGallery.tsx     # Galeria com lightbox
-│   │   ├── NextMatch.tsx       # Próximo jogo
-│   │   ├── Sponsors.tsx        # Patrocinadores
-│   │   ├── AboutProject.tsx    # Sobre o projeto
-│   │   └── Footer.tsx          # Rodapé
-│   ├── globals.css
-│   ├── layout.tsx              # Layout raiz + SEO
-│   └── page.tsx                # Página principal
-├── data/
-│   ├── interviews.json         # Dados mockados de entrevistas
-│   ├── latest-resenha.json     # Dados da última resenha
-│   ├── gallery.json            # Fotos da galeria
-│   └── match-sponsors.json     # Próximo jogo + patrocinadores
-├── types/
-│   └── index.ts                # Tipos TypeScript centralizados
-└── next.config.ts
-```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
----
+## Learn More
 
-## 🔥 Integração com Firebase (futuro)
+To learn more about Next.js, take a look at the following resources:
 
-Os dados mockados estão em `data/*.json`. Para migrar para Firebase Firestore:
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-### 1. Instalar Firebase
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-```bash
-npm install firebase
-```
+## Deploy on Vercel
 
-### 2. Criar `lib/firebase.ts`
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-```ts
-import { initializeApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
-
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const db = getFirestore(app);
-```
-
-### 3. Substituir dados mockados em `app/page.tsx`
-
-```ts
-// Antes (mock):
-import interviewsData from "@/data/interviews.json";
-
-// Depois (Firebase):
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-
-const snap = await getDocs(
-  query(collection(db, "interviews"), orderBy("date", "desc"), limit(6))
-);
-const interviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-```
-
-### 4. Variáveis de ambiente na Vercel
-
-No painel da Vercel → **Settings → Environment Variables**, adicione todas as variáveis `NEXT_PUBLIC_FIREBASE_*`.
-
----
-
-## 🎨 Personalização rápida
-
-| O que mudar | Onde |
-|---|---|
-| YouTube ID da última resenha | `data/latest-resenha.json` |
-| Entrevistas | `data/interviews.json` |
-| Fotos da galeria | `data/gallery.json` |
-| Próximo jogo | `data/match-sponsors.json` |
-| Patrocinadores | `data/match-sponsors.json` |
-| Instagram do grupo | `app/components/Footer.tsx` + `Navbar.tsx` |
-| Cor principal (verde) | `#1A7A3A` em qualquer componente |
-
----
-
-## 👤 Produção
-
-Desenvolvido por **Edson Santana** — [github.com/santluz](https://github.com/santluz)
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

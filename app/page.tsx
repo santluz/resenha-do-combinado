@@ -13,7 +13,8 @@ import Comunicado from "@/app/components/Comunicado";
 
 import {
   getLatestResenha, getInterviews, getHighlights,
-  getGallery, getNextMatch, getSponsors, getSiteConfig,
+  getGallery, getFeaturedPhoto, getNextMatch,
+  getSponsors, getSiteConfig,
 } from "@/lib/firestore";
 
 import latestResenhaFallback from "@/data/latest-resenha.json";
@@ -23,15 +24,22 @@ import type { LatestResenha as LatestResenhaType } from "@/types";
 export const revalidate = 60;
 
 export default async function Home() {
-  const [resenha, interviews, highlights, gallery, nextMatch, sponsors, siteConfig] = await Promise.all([
-    getLatestResenha().catch(() => null),
-    getInterviews().catch(() => []),
-    getHighlights().catch(() => []),
-    getGallery().catch(() => []),
-    getNextMatch().catch(() => null),
-    getSponsors().catch(() => []),
-    getSiteConfig().catch(() => ({ instagram: "resenhadocombinado", logoUrl: undefined, comunicado: undefined, comunicadoAtivo: false })),
-  ]);
+  const [resenha, interviews, highlights, gallery, featuredPhoto, nextMatch, sponsors, siteConfig] =
+    await Promise.all([
+      getLatestResenha().catch(() => null),
+      getInterviews().catch(() => []),
+      getHighlights().catch(() => []),
+      getGallery().catch(() => []),
+      getFeaturedPhoto().catch(() => null),
+      getNextMatch().catch(() => null),
+      getSponsors().catch(() => []),
+      getSiteConfig().catch(() => ({
+        instagram: "resenhadocombinado",
+        logoUrl: undefined,
+        comunicado: undefined,
+        comunicadoAtivo: false,
+      })),
+    ]);
 
   const resenhaData = resenha ?? (latestResenhaFallback as LatestResenhaType);
   const nextMatchData = nextMatch ?? matchSponsorsFallback.nextMatch;
@@ -49,7 +57,9 @@ export default async function Home() {
         <LatestResenha data={resenhaData} />
         {highlights.length > 0 && <Highlights highlights={highlights} />}
         {interviews.length > 0 && <InterviewsGrid interviews={interviews} />}
-        {gallery.length > 0 && <GameGallery photos={gallery} />}
+        {(gallery.length > 0 || featuredPhoto) && (
+          <GameGallery photos={gallery} featuredPhoto={featuredPhoto} />
+        )}
         <NextMatch match={nextMatchData} />
         {sponsorsData.length > 0 && <Sponsors sponsors={sponsorsData} />}
         <AboutProject />

@@ -32,7 +32,7 @@ export async function saveResenha(data: Omit<LatestResenha, "id">, id?: string) 
   }
 }
 
-// ─── ENTREVISTAS (máx 2) ──────────────────────────────────────────────────────
+// ─── ENTREVISTAS (máx 2) ─────────────────────────────────────────────────────
 export async function getInterviews(): Promise<Interview[]> {
   const q = query(collection(db, "interviews"), orderBy("date", "desc"), limit(2));
   const snap = await getDocs(q);
@@ -45,9 +45,9 @@ export async function deleteInterview(id: string) {
   await deleteDoc(doc(db, "interviews", id));
 }
 
-// ─── HIGHLIGHTS / MELHORES MOMENTOS (máx 3) ──────────────────────────────────
+// ─── HIGHLIGHTS (máx 6) ──────────────────────────────────────────────────────
 export async function getHighlights(): Promise<Highlight[]> {
-  const q = query(collection(db, "highlights"), orderBy("date", "desc"), limit(3));
+  const q = query(collection(db, "highlights"), orderBy("date", "desc"), limit(6));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Highlight));
 }
@@ -69,6 +69,19 @@ export async function addPhoto(data: Omit<GalleryPhoto, "id">) {
 }
 export async function deletePhoto(id: string) {
   await deleteDoc(doc(db, "gallery", id));
+}
+
+// ─── FOTO DESTAQUE ────────────────────────────────────────────────────────────
+export async function getFeaturedPhoto(): Promise<GalleryPhoto | null> {
+  const snap = await getDoc(doc(db, "config", "featuredPhoto"));
+  if (!snap.exists()) return null;
+  return snap.data() as GalleryPhoto;
+}
+export async function saveFeaturedPhoto(data: Omit<GalleryPhoto, "id">) {
+  await setDoc(doc(db, "config", "featuredPhoto"), { ...data, updatedAt: serverTimestamp() });
+}
+export async function deleteFeaturedPhoto() {
+  await deleteDoc(doc(db, "config", "featuredPhoto"));
 }
 
 // ─── PRÓXIMO JOGO ─────────────────────────────────────────────────────────────
