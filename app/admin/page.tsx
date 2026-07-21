@@ -47,54 +47,150 @@ function ConfigSection() {
   </form></Section>;
 }
 
-// ─── Apostas ───────────────────────────────────────────────────────────────────
+// ─── Apostas Admin Section ─────────────────────────────────────────────────────
 function ApostasSection() {
-  const [config,setConfig]=useState<ConfigAposta>({jogoId:"",ativo:false,adversario:"",jogadores:[],encerrado:false});
-  const [novoJ,setNovoJ]=useState(""); const [loading,setLoading]=useState(false); const [saved,setSaved]=useState(false);
-  const [resumoPG,setResumoPG]=useState<any[]>([]); const [resumoV,setResumoV]=useState<any[]>([]);
-  const [totalPG,setTotalPG]=useState(0); const [totalV,setTotalV]=useState(0);
-  const [showEncerrar,setShowEncerrar]=useState(false); const [pg,setPg]=useState(""); const [vc,setVc]=useState("");
+  const emptyConfig: ConfigAposta = { jogoId: "", ativo: false, encerrado: false, valorAposta: 5, timeA: "", timeB: "", jogadoresTimeA: [], jogadoresTimeB: [] };
+  const [config, setConfig] = useState<ConfigAposta>(emptyConfig);
+  const [novoJA, setNovoJA] = useState(""); const [novoJB, setNovoJB] = useState("");
+  const [loading, setLoading] = useState(false); const [saved, setSaved] = useState(false);
+  const [resumoPG, setResumoPG] = useState<any[]>([]); const [resumoV, setResumoV] = useState<any[]>([]);
+  const [totalPG, setTotalPG] = useState(0); const [totalV, setTotalV] = useState(0);
+  const [showEncerrar, setShowEncerrar] = useState(false); const [pg, setPg] = useState(""); const [vc, setVc] = useState("");
 
-  useEffect(()=>{getConfigAposta().then(c=>{if(c){setConfig(c);if(c.jogoId){getVotos(c.jogoId,"primeiro_gol").then(v=>{setTotalPG(v.length);setResumoPG(calcularResumo(v,c.jogadores,c.resultadoPrimeiroGol));});getVotos(c.jogoId,"vencedor").then(v=>{setTotalV(v.length);setResumoV(calcularResumo(v,["Combinado",c.adversario,"Empate"],c.resultadoVencedor));});}}});},[]);
+  useEffect(() => {
+    getConfigAposta().then(c => {
+      if (c) {
+        setConfig(c);
+        if (c.jogoId) {
+          const jogadores = [...c.jogadoresTimeA.map((j: string) => ({ nome: j, time: c.timeA })), ...c.jogadoresTimeB.map((j: string) => ({ nome: j, time: c.timeB }))];
+          getVotos(c.jogoId, "primeiro_gol").then(v => { setTotalPG(v.length); setResumoPG(calcularResumo(v, jogadores, c.resultadoPrimeiroGol)); });
+          getVotos(c.jogoId, "vencedor").then(v => { setTotalV(v.length); setResumoV(calcularResumo(v, [{ nome: c.timeA }, { nome: c.timeB }], c.resultadoVencedor)); });
+        }
+      }
+    });
+  }, []);
 
-  const save=async()=>{setLoading(true);await saveConfigAposta(config);setLoading(false);setSaved(true);setTimeout(()=>setSaved(false),2000);};
-  const novoJogo=()=>{setConfig({jogoId:`jogo_${Date.now()}`,ativo:true,adversario:"",jogadores:[],encerrado:false});setResumoPG([]);setResumoV([]);setTotalPG(0);setTotalV(0);};
-  const addJ=()=>{if(!novoJ.trim())return;setConfig({...config,jogadores:[...config.jogadores,novoJ.trim()]});setNovoJ("");};
-  const encerrar=async()=>{if(!pg||!vc)return;const u={...config,encerrado:true,resultadoPrimeiroGol:pg,resultadoVencedor:vc};setConfig(u);await saveConfigAposta(u);setSaved(true);setTimeout(()=>setSaved(false),2000);setShowEncerrar(false);};
+  const save = async () => { setLoading(true); await saveConfigAposta(config); setLoading(false); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const novoJogo = () => { setConfig({ ...emptyConfig, jogoId: `jogo_${Date.now()}`, ativo: true }); setResumoPG([]); setResumoV([]); setTotalPG(0); setTotalV(0); };
+  const encerrar = async () => {
+    if (!pg || !vc) return;
+    const u = { ...config, encerrado: true, resultadoPrimeiroGol: pg, resultadoVencedor: vc };
+    setConfig(u); await saveConfigAposta(u); setSaved(true); setTimeout(() => setSaved(false), 2000); setShowEncerrar(false);
+  };
 
-  return <Section title="🍺 Apostas do Jogo" emoji="">
-    <div className="flex items-center justify-between mb-6">
-      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold ${config.encerrado?"bg-[#333] text-[#555]":config.ativo?"bg-green-500/20 text-green-400":"bg-[#222] text-[#555]"}`}>
-        <span className={`w-2 h-2 rounded-full ${config.ativo&&!config.encerrado?"bg-green-400 animate-pulse":"bg-[#555]"}`}/>
-        {config.encerrado?"Encerradas":config.ativo?"Abertas":"Desativadas"}
+  const todosJogadores = [...config.jogadoresTimeA.map(j => ({ nome: j, time: config.timeA })), ...config.jogadoresTimeB.map(j => ({ nome: j, time: config.timeB }))];
+
+  return (
+    <div className="bg-[#151515] border border-[#222] rounded-2xl p-6 mb-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-white font-black text-xl uppercase flex items-center gap-2" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>🍺 Apostas do Jogo</h2>
+        <button onClick={novoJogo} className="bg-[#222] hover:bg-[#333] border border-[#444] text-white text-xs font-bold uppercase px-4 py-2 rounded-lg transition-colors">+ Novo Jogo</button>
       </div>
-      <button onClick={novoJogo} className="bg-[#222] hover:bg-[#333] border border-[#444] text-white text-xs font-bold uppercase px-4 py-2 rounded-lg transition-colors">+ Novo Jogo</button>
-    </div>
-    {config.jogoId&&<>
-      {!config.encerrado&&<div className="space-y-4 mb-6">
-        <div className="flex gap-3"><button type="button" onClick={()=>setConfig({...config,ativo:true})} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${config.ativo?"bg-green-600 border-green-600 text-white":"bg-transparent border-[#333] text-[#666]"}`}>Ativar</button><button type="button" onClick={()=>setConfig({...config,ativo:false})} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${!config.ativo?"bg-red-600 border-red-600 text-white":"bg-transparent border-[#333] text-[#666]"}`}>Pausar</button></div>
-        <Input label="Adversário" value={config.adversario} onChange={e=>setConfig({...config,adversario:e.target.value})} placeholder="Ex: Veteranos do Bairro"/>
-        <div>
-          <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">Jogadores — Primeiro Gol ({config.jogadores.length})</label>
-          <div className="flex gap-2 mb-3"><input value={novoJ} onChange={e=>setNovoJ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addJ()} placeholder="Nome do jogador" className="flex-1 bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none"/><button onClick={addJ} className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 rounded-lg">+ Add</button></div>
-          <div className="flex flex-wrap gap-2">{config.jogadores.map((j,i)=><span key={i} className="flex items-center gap-1.5 bg-[#0D0D0D] border border-[#333] text-white text-xs px-3 py-1.5 rounded-full">{j}<button onClick={()=>setConfig({...config,jogadores:config.jogadores.filter((_,idx)=>idx!==i)})} className="text-[#555] hover:text-red-400 ml-1">×</button></span>)}</div>
+
+      {!config.jogoId ? <p className="text-[#555] text-sm">Clique em "+ Novo Jogo" para configurar as apostas.</p> : <>
+        {/* Status */}
+        <div className="flex items-center gap-3 mb-6 p-3 bg-[#0D0D0D] rounded-xl border border-[#1C1C1C]">
+          <div className={`w-3 h-3 rounded-full ${config.encerrado ? "bg-[#555]" : config.ativo ? "bg-green-400 animate-pulse" : "bg-[#555]"}`} />
+          <span className="text-white text-sm font-semibold flex-1">{config.encerrado ? "Encerradas" : config.ativo ? "Apostas Abertas" : "Desativadas"}</span>
+          {!config.encerrado && <>
+            <button onClick={() => setConfig({ ...config, ativo: true })} className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg transition-colors ${config.ativo ? "bg-[#222] text-[#555]" : "bg-green-500/20 text-green-400 hover:bg-green-500/30"}`}>Ativar</button>
+            <button onClick={() => setConfig({ ...config, ativo: false })} className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg transition-colors ${!config.ativo ? "bg-[#222] text-[#555]" : "bg-red-600/20 text-red-400 hover:bg-red-600/30"}`}>Pausar</button>
+          </>}
         </div>
-      </div>}
-      {(totalPG>0||totalV>0)&&<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-[#0D0D0D] rounded-xl border border-[#1C1C1C] p-4"><p className="text-[#555] text-xs uppercase tracking-widest mb-3">⚽ Primeiro Gol — {totalPG} votos</p><div className="space-y-2">{resumoPG.map(r=><div key={r.voto} className="flex items-center justify-between"><span className={`text-sm ${r.acertou?"text-[#F5C518] font-bold":"text-white"}`}>{r.voto}</span><div className="flex items-center gap-2"><div className="w-20 bg-[#222] rounded-full h-1.5"><div className="bg-red-600 h-1.5 rounded-full" style={{width:`${r.percentual}%`}}/></div><span className="text-[#555] text-xs w-8 text-right">{r.percentual}%</span></div></div>)}</div></div>
-        <div className="bg-[#0D0D0D] rounded-xl border border-[#1C1C1C] p-4"><p className="text-[#555] text-xs uppercase tracking-widest mb-3">🏆 Vencedor — {totalV} votos</p><div className="space-y-2">{resumoV.map(r=><div key={r.voto} className="flex items-center justify-between"><span className={`text-sm ${r.acertou?"text-[#F5C518] font-bold":"text-white"}`}>{r.voto}</span><div className="flex items-center gap-2"><div className="w-20 bg-[#222] rounded-full h-1.5"><div className="bg-red-600 h-1.5 rounded-full" style={{width:`${r.percentual}%`}}/></div><span className="text-[#555] text-xs w-8 text-right">{r.percentual}%</span></div></div>)}</div></div>
-      </div>}
-      {config.ativo&&!config.encerrado&&!showEncerrar&&<button onClick={()=>setShowEncerrar(true)} className="w-full border border-dashed border-[#444] hover:border-[#F5C518] text-[#555] hover:text-[#F5C518] text-sm font-semibold py-3 rounded-xl transition-colors mb-4">🏁 Encerrar e registrar resultado</button>}
-      {showEncerrar&&<div className="bg-[#0D0D0D] border border-[#F5C518]/30 rounded-xl p-5 space-y-4 mb-4">
-        <p className="text-[#F5C518] text-sm font-bold uppercase tracking-widest">🏁 Registrar Resultado</p>
-        <div><label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Primeiro Gol</label><select value={pg} onChange={e=>setPg(e.target.value)} className="w-full bg-[#151515] border border-[#333] rounded-lg px-4 py-2.5 text-white text-sm outline-none"><option value="">Selecione...</option>{config.jogadores.map(j=><option key={j} value={j}>{j}</option>)}<option value="Ninguém">Ninguém (0x0)</option></select></div>
-        <div><label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Vencedor</label><select value={vc} onChange={e=>setVc(e.target.value)} className="w-full bg-[#151515] border border-[#333] rounded-lg px-4 py-2.5 text-white text-sm outline-none"><option value="">Selecione...</option><option value="Combinado">Combinado</option><option value={config.adversario}>{config.adversario}</option><option value="Empate">Empate</option></select></div>
-        <div className="flex gap-3"><button onClick={encerrar} disabled={!pg||!vc} className="flex-1 bg-[#F5C518] hover:bg-yellow-400 disabled:opacity-50 text-black font-black uppercase text-xs py-3 rounded-lg">Confirmar</button><button onClick={()=>setShowEncerrar(false)} className="px-4 bg-[#222] hover:bg-[#333] text-[#888] text-xs font-bold uppercase rounded-lg">Cancelar</button></div>
-      </div>}
-      {!config.encerrado&&<div className="flex items-center gap-4"><button onClick={save} disabled={loading} className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold uppercase tracking-widest text-xs px-6 py-3 rounded-lg">{loading?"Salvando...":"Salvar Apostas"}</button>{saved&&<span className="text-green-500 text-sm">✓ Salvo!</span>}</div>}
-    </>}
-  </Section>;
+
+        {!config.encerrado && <div className="space-y-5 mb-6">
+          {/* Valor */}
+          <div>
+            <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Valor da Aposta (R$)</label>
+            <input type="number" min="1" step="0.50" value={config.valorAposta}
+              onChange={e => setConfig({ ...config, valorAposta: parseFloat(e.target.value) || 0 })}
+              className="w-full bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
+          </div>
+
+          {/* Times */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">🔴 Nome do Time A</label>
+              <input value={config.timeA} onChange={e => setConfig({ ...config, timeA: e.target.value })} placeholder="Ex: Azulão" className="w-full bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
+            </div>
+            <div>
+              <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">🔵 Nome do Time B</label>
+              <input value={config.timeB} onChange={e => setConfig({ ...config, timeB: e.target.value })} placeholder="Ex: Verdão" className="w-full bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
+            </div>
+          </div>
+
+          {/* Jogadores Time A */}
+          <div>
+            <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">🔴 Jogadores do {config.timeA || "Time A"} ({config.jogadoresTimeA.length})</label>
+            <div className="flex gap-2 mb-2">
+              <input value={novoJA} onChange={e => setNovoJA(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { if (novoJA.trim()) { setConfig({ ...config, jogadoresTimeA: [...config.jogadoresTimeA, novoJA.trim()] }); setNovoJA(""); } } }}
+                placeholder="Nome do jogador" className="flex-1 bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
+              <button onClick={() => { if (novoJA.trim()) { setConfig({ ...config, jogadoresTimeA: [...config.jogadoresTimeA, novoJA.trim()] }); setNovoJA(""); } }} className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 rounded-lg">+ Add</button>
+            </div>
+            <div className="flex flex-wrap gap-2">{config.jogadoresTimeA.map((j, i) => <span key={i} className="flex items-center gap-1.5 bg-red-600/10 border border-red-600/30 text-red-400 text-xs px-3 py-1.5 rounded-full">{j}<button onClick={() => setConfig({ ...config, jogadoresTimeA: config.jogadoresTimeA.filter((_, idx) => idx !== i) })} className="hover:text-white ml-1">×</button></span>)}</div>
+          </div>
+
+          {/* Jogadores Time B */}
+          <div>
+            <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">🔵 Jogadores do {config.timeB || "Time B"} ({config.jogadoresTimeB.length})</label>
+            <div className="flex gap-2 mb-2">
+              <input value={novoJB} onChange={e => setNovoJB(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { if (novoJB.trim()) { setConfig({ ...config, jogadoresTimeB: [...config.jogadoresTimeB, novoJB.trim()] }); setNovoJB(""); } } }}
+                placeholder="Nome do jogador" className="flex-1 bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
+              <button onClick={() => { if (novoJB.trim()) { setConfig({ ...config, jogadoresTimeB: [...config.jogadoresTimeB, novoJB.trim()] }); setNovoJB(""); } }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-4 rounded-lg">+ Add</button>
+            </div>
+            <div className="flex flex-wrap gap-2">{config.jogadoresTimeB.map((j, i) => <span key={i} className="flex items-center gap-1.5 bg-blue-600/10 border border-blue-600/30 text-blue-400 text-xs px-3 py-1.5 rounded-full">{j}<button onClick={() => setConfig({ ...config, jogadoresTimeB: config.jogadoresTimeB.filter((_, idx) => idx !== i) })} className="hover:text-white ml-1">×</button></span>)}</div>
+          </div>
+        </div>}
+
+        {/* Votos em tempo real */}
+        {(totalPG > 0 || totalV > 0) && <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-[#0D0D0D] rounded-xl border border-[#1C1C1C] p-4">
+            <p className="text-[#555] text-xs uppercase tracking-widest mb-3">⚽ Primeiro Gol — {totalPG} votos · Pote: R$ {(totalPG * config.valorAposta).toFixed(2).replace(".", ",")}</p>
+            <div className="space-y-2">{resumoPG.map(r => <div key={r.voto} className="flex items-center justify-between"><div><span className={`text-sm ${r.acertou ? "text-[#F5C518] font-bold" : "text-white"}`}>{r.voto}</span>{r.time && <span className="text-[#444] text-xs ml-2">({r.time})</span>}</div><div className="flex items-center gap-2"><div className="w-16 bg-[#222] rounded-full h-1.5"><div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${r.percentual}%` }} /></div><span className="text-[#555] text-xs w-8 text-right">{r.percentual}%</span></div></div>)}</div>
+          </div>
+          <div className="bg-[#0D0D0D] rounded-xl border border-[#1C1C1C] p-4">
+            <p className="text-[#555] text-xs uppercase tracking-widest mb-3">🏆 Vencedor — {totalV} votos · Pote: R$ {(totalV * config.valorAposta).toFixed(2).replace(".", ",")}</p>
+            <div className="space-y-2">{resumoV.map(r => <div key={r.voto} className="flex items-center justify-between"><span className={`text-sm ${r.acertou ? "text-[#F5C518] font-bold" : "text-white"}`}>{r.voto}</span><div className="flex items-center gap-2"><div className="w-16 bg-[#222] rounded-full h-1.5"><div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${r.percentual}%` }} /></div><span className="text-[#555] text-xs w-8 text-right">{r.percentual}%</span></div></div>)}</div>
+          </div>
+        </div>}
+
+        {/* Encerrar */}
+        {config.ativo && !config.encerrado && !showEncerrar && (
+          <button onClick={() => setShowEncerrar(true)} className="w-full border border-dashed border-[#444] hover:border-[#F5C518] text-[#555] hover:text-[#F5C518] text-sm font-semibold py-3 rounded-xl transition-colors mb-4">🏁 Encerrar e registrar resultado</button>
+        )}
+        {showEncerrar && <div className="bg-[#0D0D0D] border border-[#F5C518]/30 rounded-xl p-5 space-y-4 mb-4">
+          <p className="text-[#F5C518] text-sm font-bold uppercase tracking-widest">🏁 Registrar Resultado</p>
+          <div>
+            <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Quem fez o primeiro gol?</label>
+            <select value={pg} onChange={e => setPg(e.target.value)} className="w-full bg-[#151515] border border-[#333] rounded-lg px-4 py-2.5 text-white text-sm outline-none">
+              <option value="">Selecione...</option>
+              {todosJogadores.map(j => <option key={j.nome} value={j.nome}>{j.nome} ({j.time})</option>)}
+              <option value="Ninguém">Ninguém (0 x 0)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Quem venceu?</label>
+            <select value={vc} onChange={e => setVc(e.target.value)} className="w-full bg-[#151515] border border-[#333] rounded-lg px-4 py-2.5 text-white text-sm outline-none">
+              <option value="">Selecione...</option>
+              <option value={config.timeA}>{config.timeA}</option>
+              <option value={config.timeB}>{config.timeB}</option>
+            </select>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={encerrar} disabled={!pg || !vc} className="flex-1 bg-[#F5C518] hover:bg-yellow-400 disabled:opacity-50 text-black font-black uppercase text-xs py-3 rounded-lg">Confirmar</button>
+            <button onClick={() => setShowEncerrar(false)} className="px-4 bg-[#222] hover:bg-[#333] text-[#888] text-xs font-bold uppercase rounded-lg">Cancelar</button>
+          </div>
+        </div>}
+
+        {!config.encerrado && <div className="flex items-center gap-4">
+          <button onClick={save} disabled={loading} className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold uppercase tracking-widest text-xs px-6 py-3 rounded-lg">{loading ? "Salvando..." : "Salvar Apostas"}</button>
+          {saved && <span className="text-green-500 text-sm">✓ Salvo!</span>}
+        </div>}
+      </>}
+    </div>
+  );
 }
+
 
 // ─── Última Entrevista ─────────────────────────────────────────────────────────
 function ResenhaSection() {
