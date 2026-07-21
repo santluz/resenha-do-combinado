@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-export const metadata: Metadata = {
-  title: "Resenha do Combinado | Futebol Amador",
-  description: "As histórias, entrevistas e melhores momentos depois do apito final.",
-};
+export const metadata: Metadata = { title: "Resenha do Combinado | Futebol Amador", description: "As histórias, entrevistas e melhores momentos depois do apito final." };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
