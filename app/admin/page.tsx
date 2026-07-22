@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { getLatestResenha, saveResenha, getInterviews, addInterview, deleteInterview, getHighlights, addHighlight, deleteHighlight, getGallery, addPhoto, deletePhoto, getFeaturedPhoto, saveFeaturedPhoto, deleteFeaturedPhoto, getNextMatch, saveNextMatch, getSponsors, addSponsor, deleteSponsor, getSiteConfig, saveSiteConfig } from "@/lib/firestore";
+import { getLatestResenha, saveResenha, deleteResenha, getInterviews, addInterview, deleteInterview, getHighlights, addHighlight, deleteHighlight, getGallery, addPhoto, deletePhoto, getFeaturedPhoto, saveFeaturedPhoto, deleteFeaturedPhoto, getNextMatch, saveNextMatch, getSponsors, addSponsor, deleteSponsor, getSiteConfig, saveSiteConfig } from "@/lib/firestore";
 import { getConfigAposta, saveConfigAposta, getVotos, calcularResumo } from "@/lib/firestore-apostas";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import type { Interview, Highlight, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
@@ -195,11 +195,38 @@ function ApostasSection() {
 // ─── Última Entrevista ─────────────────────────────────────────────────────────
 function ResenhaSection() {
   const [data,setData]=useState<LatestResenha>({youtubeId:"",title:"",date:"",description:"",matchStats:{goals:"",opponent:"",location:""}});
-  const [videoFile,setVideoFile]=useState<File|null>(null); const [progress,setProgress]=useState(0); const [loading,setLoading]=useState(false); const [saved,setSaved]=useState(false); const [useYt,setUseYt]=useState(true);
+  const [videoFile,setVideoFile]=useState<File|null>(null); const [progress,setProgress]=useState(0); const [loading,setLoading]=useState(false); const [saved,setSaved]=useState(false); const [useYt,setUseYt]=useState(true); const [deleting,setDeleting]=useState(false);
   const videoRef=useRef<HTMLInputElement>(null);
-  useEffect(()=>{getLatestResenha().then(r=>{if(r){setData(r);setUseYt(!r.videoUrl);}});},[]);
+  const load = () => getLatestResenha().then(r=>{if(r){setData(r);setUseYt(!r.videoUrl);}});
+  useEffect(()=>{load();},[]);
   const handleSubmit=async(e:React.FormEvent)=>{e.preventDefault();setLoading(true);let d={...data};if(!useYt&&videoFile){setProgress(1);const r=await uploadToCloudinary(videoFile,setProgress);d={...d,youtubeId:"",videoUrl:r.url};}await saveResenha(d,(d as any).id);setProgress(0);setVideoFile(null);setLoading(false);setSaved(true);setTimeout(()=>setSaved(false),2000);};
+  const handleDelete=async()=>{if(!confirm("Remover esta entrevista?"))return;if(!(data as any).id)return;setDeleting(true);await deleteResenha((data as any).id);setData({youtubeId:"",title:"",date:"",description:"",matchStats:{goals:"",opponent:"",location:""}});setDeleting(false);setSaved(true);setTimeout(()=>setSaved(false),2000);};
+  const temConteudo = !!(data as any).id;
   return <Section title="Última Entrevista" emoji="🎬">
+    {/* Preview do vídeo atual */}
+    {temConteudo && (
+      <div className="mb-6 bg-[#0D0D0D] border border-[#1C1C1C] rounded-xl p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <p className="text-[#555] text-xs uppercase tracking-widest mb-1">Entrevista atual</p>
+            <p className="text-white font-semibold text-sm">{data.title}</p>
+            <p className="text-[#555] text-xs mt-1">{data.date} · {data.videoUrl ? "📱 vídeo próprio" : `📺 YouTube: ${data.youtubeId}`}</p>
+          </div>
+          <button onClick={handleDelete} disabled={deleting}
+            className="flex-shrink-0 bg-red-600/10 hover:bg-red-600 border border-red-600/50 hover:border-red-600 text-red-500 hover:text-white text-xs font-bold uppercase px-4 py-2.5 rounded-lg transition-all disabled:opacity-50">
+            {deleting ? "Removendo..." : "🗑 Deletar"}
+          </button>
+        </div>
+        {/* Mini preview do vídeo */}
+        {(data.youtubeId || data.videoUrl) && (
+          <div className="mt-3 relative w-full max-w-xs aspect-video rounded-lg overflow-hidden bg-black">
+            {data.videoUrl
+              ? <video src={data.videoUrl} className="w-full h-full object-cover" />
+              : <img src={`https://img.youtube.com/vi/${data.youtubeId}/hqdefault.jpg`} alt={data.title} className="w-full h-full object-cover" />}
+          </div>
+        )}
+      </div>
+    )}
     <div className="flex gap-3 mb-6">{["youtube","upload"].map(m=><button key={m} type="button" onClick={()=>setUseYt(m==="youtube")} className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest border transition-colors ${(m==="youtube")===useYt?"bg-red-600 border-red-600 text-white":"bg-transparent border-[#333] text-[#666]"}`}>{m==="youtube"?"📺 YouTube":"📱 Celular"}</button>)}</div>
     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {useYt?<div className="md:col-span-2"><Input label="ID do YouTube" tip="Parte depois de ?v=" value={data.youtubeId||""} onChange={e=>setData({...data,youtubeId:e.target.value})} placeholder="Ex: ABC123xyz"/></div>
@@ -210,7 +237,7 @@ function ResenhaSection() {
       <Input label="Adversário" value={data.matchStats.opponent} onChange={e=>setData({...data,matchStats:{...data.matchStats,opponent:e.target.value}})}/>
       <div className="md:col-span-2"><Input label="Local" value={data.matchStats.location} onChange={e=>setData({...data,matchStats:{...data.matchStats,location:e.target.value}})}/></div>
       <div className="md:col-span-2"><Textarea label="Descrição" value={data.description} rows={3} onChange={e=>setData({...data,description:e.target.value})}/></div>
-      <div className="md:col-span-2 flex items-center gap-4"><SaveBtn loading={loading}/>{saved&&<span className="text-green-500 text-sm">✓ Salvo!</span>}</div>
+      <div className="md:col-span-2 flex items-center gap-4"><SaveBtn loading={loading} label={temConteudo ? "Atualizar" : "Salvar"}/>{saved&&<span className="text-green-500 text-sm">✓ {temConteudo ? "Atualizado!" : "Salvo!"}</span>}</div>
     </form>
   </Section>;
 }
