@@ -1,5 +1,9 @@
 "use client";
-// components/Apostas.tsx — Sistema de apostas com times A e B, valor fixo, sem empate
+// components/Apostas.tsx
+// Sistema de apostas com times A e B, valor fixo, sem empate
+
+// Helper para formatar valor com segurança
+const formatVal = (val: number | undefined) => (val ?? 0).toFixed(2).replace(".", ",");
 
 import { useState, useEffect } from "react";
 import { getVotos, registrarVoto, jaVotou, calcularResumo } from "@/lib/firestore-apostas";
@@ -48,7 +52,7 @@ function CardAposta({ titulo, emoji, tipo, opcoes, jogoId, encerrado, resultado,
   };
 
   const jaEnc = encerrado && resultado;
-  const totalValor = (totalVotos * valorAposta).toFixed(2).replace(".", ",");
+  const totalValor = formatVal(totalVotos * (valorAposta ?? 0));
 
   return (
     <div className="bg-[#151515] border border-[#222] rounded-2xl overflow-hidden">
@@ -75,7 +79,7 @@ function CardAposta({ titulo, emoji, tipo, opcoes, jogoId, encerrado, resultado,
         <div className="flex items-center justify-center gap-2 mb-5 bg-[#0D0D0D] rounded-xl py-3 border border-[#1C1C1C]">
           <span className="text-[#555] text-sm">Valor da aposta:</span>
           <span className="text-[#F5C518] font-black text-xl" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>
-            R$ {valorAposta.toFixed(2).replace(".", ",")}
+            R$ {formatVal(valorAposta)}
           </span>
         </div>
 
@@ -93,7 +97,7 @@ function CardAposta({ titulo, emoji, tipo, opcoes, jogoId, encerrado, resultado,
             const isVotado = votado && meuVoto === item.voto;
             const acertou = jaEnc && item.voto === resultado;
             const errou = jaEnc && votado && meuVoto === item.voto && item.voto !== resultado;
-            const ganho = acertou && isVotado ? (totalVotos * valorAposta).toFixed(2).replace(".", ",") : null;
+            const ganho = acertou && isVotado ? formatVal(totalVotos * (valorAposta ?? 0)) : null;
 
             return !votado && !encerrado ? (
               <button key={item.voto} onClick={() => handleVotar(item.voto)} disabled={loading}
@@ -135,7 +139,7 @@ function CardAposta({ titulo, emoji, tipo, opcoes, jogoId, encerrado, resultado,
         {votado && !encerrado && (
           <div className="mt-4 text-center">
             <p className="text-green-400 text-sm font-semibold">✓ Voto em <strong>{meuVoto}</strong> registrado!</p>
-            <p className="text-[#555] text-xs mt-1">🍺 Quem errar paga R$ {valorAposta.toFixed(2).replace(".", ",")}!</p>
+            <p className="text-[#555] text-xs mt-1">🍺 Quem errar paga R$ {formatVal(valorAposta)}!</p>
           </div>
         )}
       </div>
@@ -161,6 +165,8 @@ export default function Apostas({ config }: Props) {
   };
 
   if (!config.ativo && !config.encerrado) return null;
+
+  const valor = config.valorAposta ?? 0;
 
   // Monta lista de jogadores com seus times — proteção contra undefined
   const jogadoresComTime = [
@@ -189,7 +195,7 @@ export default function Apostas({ config }: Props) {
         <p className="text-[#555] text-sm mb-10">
           {config.encerrado
             ? "Apostas encerradas — veja quem acertou e quanto vai pagar! 🍺"
-            : `Aposte R$ ${config.valorAposta.toFixed(2).replace(".", ",")} — ${config.timeA} vs ${config.timeB}`}
+            : `Aposte R$ ${formatVal(config.valorAposta)} — ${config.timeA} vs ${config.timeB}`}
         </p>
 
         {/* Input nome */}
@@ -198,7 +204,7 @@ export default function Apostas({ config }: Props) {
             <p className="text-2xl mb-3">✍️</p>
             <h3 className="text-white font-black uppercase text-xl mb-2"
               style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>Como você se chama?</h3>
-            <p className="text-[#555] text-sm mb-4">Digite seu nome para participar — cada um paga R$ {config.valorAposta.toFixed(2).replace(".", ",")}</p>
+            <p className="text-[#555] text-sm mb-4">Digite seu nome para participar — cada um paga R$ {formatVal(config.valorAposta)}</p>
             <input type="text" placeholder="Seu nome ou apelido" value={nomeVotante}
               onChange={(e) => setNomeVotante(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && confirmarNome()}
