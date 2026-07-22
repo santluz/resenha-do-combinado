@@ -39,13 +39,23 @@ export async function getVotos(jogoId: string, tipo: "primeiro_gol" | "vencedor"
   } catch { return []; }
 }
 
-export function calcularResumo(votos: Aposta[], opcoes: { nome: string; time?: string }[], resultado?: string): { voto: string; time?: string; total: number; percentual: number; acertou?: boolean }[] {
+// Aceita tanto string[] quanto {nome, time}[] para compatibilidade
+export function calcularResumo(
+  votos: Aposta[],
+  opcoes: (string | { nome: string; time?: string })[],
+  resultado?: string
+): { voto: string; time?: string; total: number; percentual: number; acertou?: boolean }[] {
   const total = votos.length;
-  return opcoes.map(opcao => ({
-    voto: opcao.nome,
-    time: opcao.time,
-    total: votos.filter(v => v.voto === opcao.nome).length,
-    percentual: total > 0 ? Math.round((votos.filter(v => v.voto === opcao.nome).length / total) * 100) : 0,
-    acertou: resultado ? opcao.nome === resultado : undefined,
-  }));
+  return (opcoes || []).map(opcao => {
+    const nome = typeof opcao === "string" ? opcao : opcao.nome;
+    const time = typeof opcao === "string" ? undefined : opcao.time;
+    const count = votos.filter(v => v.voto === nome).length;
+    return {
+      voto: nome,
+      time,
+      total: count,
+      percentual: total > 0 ? Math.round((count / total) * 100) : 0,
+      acertou: resultado ? nome === resultado : undefined,
+    };
+  });
 }
