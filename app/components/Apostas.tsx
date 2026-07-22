@@ -162,10 +162,10 @@ export default function Apostas({ config }: Props) {
 
   if (!config.ativo && !config.encerrado) return null;
 
-  // Monta lista de jogadores com seus times
+  // Monta lista de jogadores com seus times — proteção contra undefined
   const jogadoresComTime = [
-    ...config.jogadoresTimeA.map(j => ({ nome: j, time: config.timeA })),
-    ...config.jogadoresTimeB.map(j => ({ nome: j, time: config.timeB })),
+    ...(config.jogadoresTimeA || []).map(j => ({ nome: j, time: config.timeA })),
+    ...(config.jogadoresTimeB || []).map(j => ({ nome: j, time: config.timeB })),
   ];
 
   return (
