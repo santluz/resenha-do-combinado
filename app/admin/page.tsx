@@ -60,9 +60,9 @@ function ApostasSection() {
   useEffect(() => {
     getConfigAposta().then(c => {
       if (c) {
-        setConfig(c);
+        setConfig({ ...{ jogadoresTimeA: [], jogadoresTimeB: [], valorAposta: 5 }, ...c });
         if (c.jogoId) {
-          const jogadores = [...c.jogadoresTimeA.map((j: string) => ({ nome: j, time: c.timeA })), ...c.jogadoresTimeB.map((j: string) => ({ nome: j, time: c.timeB }))];
+          const jogadores = [...(c.jogadoresTimeA||[]).map((j: string) => ({ nome: j, time: c.timeA })), ...(c.jogadoresTimeB||[]).map((j: string) => ({ nome: j, time: c.timeB }))];
           getVotos(c.jogoId, "primeiro_gol").then(v => { setTotalPG(v.length); setResumoPG(calcularResumo(v, jogadores, c.resultadoPrimeiroGol)); });
           getVotos(c.jogoId, "vencedor").then(v => { setTotalV(v.length); setResumoV(calcularResumo(v, [{ nome: c.timeA }, { nome: c.timeB }], c.resultadoVencedor)); });
         }
@@ -78,7 +78,7 @@ function ApostasSection() {
     setConfig(u); await saveConfigAposta(u); setSaved(true); setTimeout(() => setSaved(false), 2000); setShowEncerrar(false);
   };
 
-  const todosJogadores = [...config.jogadoresTimeA.map(j => ({ nome: j, time: config.timeA })), ...config.jogadoresTimeB.map(j => ({ nome: j, time: config.timeB }))];
+  const todosJogadores = [...(config.jogadoresTimeA||[]).map(j => ({ nome: j, time: config.timeA })), ...(config.jogadoresTimeB||[]).map(j => ({ nome: j, time: config.timeB }))];
 
   return (
     <div className="bg-[#151515] border border-[#222] rounded-2xl p-6 mb-6">
@@ -121,24 +121,24 @@ function ApostasSection() {
 
           {/* Jogadores Time A */}
           <div>
-            <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">🔴 Jogadores do {config.timeA || "Time A"} ({config.jogadoresTimeA.length})</label>
+            <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">🔴 Jogadores do {config.timeA || "Time A"} ({(config.jogadoresTimeA||[]).length})</label>
             <div className="flex gap-2 mb-2">
-              <input value={novoJA} onChange={e => setNovoJA(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { if (novoJA.trim()) { setConfig({ ...config, jogadoresTimeA: [...config.jogadoresTimeA, novoJA.trim()] }); setNovoJA(""); } } }}
+              <input value={novoJA} onChange={e => setNovoJA(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { if (novoJA.trim()) { setConfig({ ...config, jogadoresTimeA: [...(config.jogadoresTimeA||[]), novoJA.trim()] }); setNovoJA(""); } } }}
                 placeholder="Nome do jogador" className="flex-1 bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
-              <button onClick={() => { if (novoJA.trim()) { setConfig({ ...config, jogadoresTimeA: [...config.jogadoresTimeA, novoJA.trim()] }); setNovoJA(""); } }} className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 rounded-lg">+ Add</button>
+              <button onClick={() => { if (novoJA.trim()) { setConfig({ ...config, jogadoresTimeA: [...(config.jogadoresTimeA||[]), novoJA.trim()] }); setNovoJA(""); } }} className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 rounded-lg">+ Add</button>
             </div>
-            <div className="flex flex-wrap gap-2">{config.jogadoresTimeA.map((j, i) => <span key={i} className="flex items-center gap-1.5 bg-red-600/10 border border-red-600/30 text-red-400 text-xs px-3 py-1.5 rounded-full">{j}<button onClick={() => setConfig({ ...config, jogadoresTimeA: config.jogadoresTimeA.filter((_, idx) => idx !== i) })} className="hover:text-white ml-1">×</button></span>)}</div>
+            <div className="flex flex-wrap gap-2">{(config.jogadoresTimeA||[]).map((j, i) => <span key={i} className="flex items-center gap-1.5 bg-red-600/10 border border-red-600/30 text-red-400 text-xs px-3 py-1.5 rounded-full">{j}<button onClick={() => setConfig({ ...config, jogadoresTimeA: (config.jogadoresTimeA||[]).filter((_, idx) => idx !== i) })} className="hover:text-white ml-1">×</button></span>)}</div>
           </div>
 
           {/* Jogadores Time B */}
           <div>
-            <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">🔵 Jogadores do {config.timeB || "Time B"} ({config.jogadoresTimeB.length})</label>
+            <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">🔵 Jogadores do {config.timeB || "Time B"} ({(config.jogadoresTimeB||[]).length})</label>
             <div className="flex gap-2 mb-2">
-              <input value={novoJB} onChange={e => setNovoJB(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { if (novoJB.trim()) { setConfig({ ...config, jogadoresTimeB: [...config.jogadoresTimeB, novoJB.trim()] }); setNovoJB(""); } } }}
+              <input value={novoJB} onChange={e => setNovoJB(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { if (novoJB.trim()) { setConfig({ ...config, jogadoresTimeB: [...(config.jogadoresTimeB||[]), novoJB.trim()] }); setNovoJB(""); } } }}
                 placeholder="Nome do jogador" className="flex-1 bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
-              <button onClick={() => { if (novoJB.trim()) { setConfig({ ...config, jogadoresTimeB: [...config.jogadoresTimeB, novoJB.trim()] }); setNovoJB(""); } }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-4 rounded-lg">+ Add</button>
+              <button onClick={() => { if (novoJB.trim()) { setConfig({ ...config, jogadoresTimeB: [...(config.jogadoresTimeB||[]), novoJB.trim()] }); setNovoJB(""); } }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-4 rounded-lg">+ Add</button>
             </div>
-            <div className="flex flex-wrap gap-2">{config.jogadoresTimeB.map((j, i) => <span key={i} className="flex items-center gap-1.5 bg-blue-600/10 border border-blue-600/30 text-blue-400 text-xs px-3 py-1.5 rounded-full">{j}<button onClick={() => setConfig({ ...config, jogadoresTimeB: config.jogadoresTimeB.filter((_, idx) => idx !== i) })} className="hover:text-white ml-1">×</button></span>)}</div>
+            <div className="flex flex-wrap gap-2">{(config.jogadoresTimeB||[]).map((j, i) => <span key={i} className="flex items-center gap-1.5 bg-blue-600/10 border border-blue-600/30 text-blue-400 text-xs px-3 py-1.5 rounded-full">{j}<button onClick={() => setConfig({ ...config, jogadoresTimeB: (config.jogadoresTimeB||[]).filter((_, idx) => idx !== i) })} className="hover:text-white ml-1">×</button></span>)}</div>
           </div>
         </div>}
 
