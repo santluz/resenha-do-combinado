@@ -102,9 +102,24 @@ function ApostasSection() {
           {/* Valor */}
           <div>
             <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Valor da Aposta (R$)</label>
-            <input type="number" min="1" step="0.50" value={config.valorAposta}
-              onChange={e => setConfig({ ...config, valorAposta: parseFloat(e.target.value) || 0 })}
-              className="w-full bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#555] text-sm font-bold">R$</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={config.valorAposta ? config.valorAposta.toFixed(2).replace(".", ",") : ""}
+                onChange={e => {
+                  // Permite apenas números e vírgula
+                  const raw = e.target.value.replace(/[^\d,]/g, "");
+                  // Converte vírgula para ponto e salva como número
+                  const num = parseFloat(raw.replace(",", ".")) || 0;
+                  setConfig({ ...config, valorAposta: num });
+                }}
+                className="w-full bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none transition-colors"
+              />
+            </div>
+            <p className="text-[#444] text-xs mt-1">Ex: 5,00 · 10,50 · 20,00</p>
           </div>
 
           {/* Times */}
