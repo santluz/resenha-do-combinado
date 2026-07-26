@@ -11,7 +11,6 @@ export default function Navbar({ instagram, logoUrl }: Props) {
     { label: "Highlights", href: "#highlights" },
     { label: "Entrevistas", href: "#entrevistas" },
     { label: "Galeria", href: "#galeria" },
-    { label: "Apostas 🍺", href: "#apostas" },
     { label: "Próximo Jogo", href: "#proximo-jogo" },
   ];
   return (

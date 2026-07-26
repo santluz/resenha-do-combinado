@@ -9,10 +9,10 @@ export async function deleteResenha(id: string) { await deleteDoc(doc(db, "resen
 export async function getInterviews(): Promise<Interview[]> { const q = query(collection(db, "interviews"), orderBy("date", "desc"), limit(2)); const snap = await getDocs(q); return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Interview)); }
 export async function addInterview(data: Omit<Interview, "id">) { await addDoc(collection(db, "interviews"), { ...data, createdAt: serverTimestamp() }); }
 export async function deleteInterview(id: string) { await deleteDoc(doc(db, "interviews", id)); }
-export async function getHighlights(): Promise<Highlight[]> { const q = query(collection(db, "highlights"), orderBy("date", "desc"), limit(6)); const snap = await getDocs(q); return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Highlight)); }
+export async function getHighlights(): Promise<Highlight[]> { const q = query(collection(db, "highlights"), orderBy("date", "desc"), limit(4)); const snap = await getDocs(q); return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Highlight)); }
 export async function addHighlight(data: Omit<Highlight, "id">) { await addDoc(collection(db, "highlights"), { ...data, createdAt: serverTimestamp() }); }
 export async function deleteHighlight(id: string) { await deleteDoc(doc(db, "highlights", id)); }
-export async function getGallery(): Promise<GalleryPhoto[]> { const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"), limit(6)); const snap = await getDocs(q); return snap.docs.map((d) => ({ id: d.id, ...d.data() } as GalleryPhoto)); }
+export async function getGallery(): Promise<GalleryPhoto[]> { const q = query(collection(db, "gallery"), orderBy("createdAt", "desc")); const snap = await getDocs(q); return snap.docs.map((d) => ({ id: d.id, ...d.data() } as GalleryPhoto)); }
 export async function addPhoto(data: Omit<GalleryPhoto, "id">) { await addDoc(collection(db, "gallery"), { ...data, createdAt: serverTimestamp() }); }
 export async function deletePhoto(id: string) { await deleteDoc(doc(db, "gallery", id)); }
 export async function getFeaturedPhoto(): Promise<GalleryPhoto | null> { try { const snap = await getDoc(doc(db, "config", "featuredPhoto")); if (!snap.exists()) return null; return snap.data() as GalleryPhoto; } catch { return null; } }

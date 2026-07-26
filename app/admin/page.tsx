@@ -1,10 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { getLatestResenha, saveResenha, deleteResenha, getInterviews, addInterview, deleteInterview, getHighlights, addHighlight, deleteHighlight, getGallery, addPhoto, deletePhoto, getFeaturedPhoto, saveFeaturedPhoto, deleteFeaturedPhoto, getNextMatch, saveNextMatch, getSponsors, addSponsor, deleteSponsor, getSiteConfig, saveSiteConfig } from "@/lib/firestore";
-import { getConfigAposta, saveConfigAposta, getVotos, calcularResumo } from "@/lib/firestore-apostas";
+import { getLatestResenha, saveResenha, deleteResenha, getInterviews, addInterview, deleteInterview, getHighlights, addHighlight, deleteHighlight, getGallery, addPhoto, deletePhoto, getFeaturedPhoto, saveFeaturedPhoto, deleteFeaturedPhoto, getNextMatch, saveNextMatch, getSiteConfig, saveSiteConfig } from "@/lib/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import type { Interview, Highlight, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
-import type { ConfigAposta } from "@/types/apostas";
 
 function ProgressBar({ pct, label }: { pct: number; label?: string }) {
   if (pct <= 0 || pct >= 100) return null;
@@ -46,166 +44,6 @@ function ConfigSection() {
     <div className="flex items-center gap-4"><SaveBtn loading={loading} label="Salvar Configurações"/>{saved&&<span className="text-green-500 text-sm">✓ Salvo!</span>}</div>
   </form></Section>;
 }
-
-// ─── Apostas Admin Section ─────────────────────────────────────────────────────
-function ApostasSection() {
-  const emptyConfig: ConfigAposta = { jogoId: "", ativo: false, encerrado: false, valorAposta: 5, timeA: "", timeB: "", jogadoresTimeA: [], jogadoresTimeB: [] };
-  const [config, setConfig] = useState<ConfigAposta>(emptyConfig);
-  const [novoJA, setNovoJA] = useState(""); const [novoJB, setNovoJB] = useState("");
-  const [loading, setLoading] = useState(false); const [saved, setSaved] = useState(false);
-  const [resumoPG, setResumoPG] = useState<any[]>([]); const [resumoV, setResumoV] = useState<any[]>([]);
-  const [totalPG, setTotalPG] = useState(0); const [totalV, setTotalV] = useState(0);
-  const [showEncerrar, setShowEncerrar] = useState(false); const [pg, setPg] = useState(""); const [vc, setVc] = useState("");
-
-  useEffect(() => {
-    getConfigAposta().then(c => {
-      if (c) {
-        setConfig({ ...{ jogadoresTimeA: [], jogadoresTimeB: [], valorAposta: 5 }, ...c });
-        if (c.jogoId) {
-          const jogadores = [...(c.jogadoresTimeA||[]).map((j: string) => ({ nome: j, time: c.timeA })), ...(c.jogadoresTimeB||[]).map((j: string) => ({ nome: j, time: c.timeB }))];
-          getVotos(c.jogoId, "primeiro_gol").then(v => { setTotalPG(v.length); setResumoPG(calcularResumo(v, jogadores, c.resultadoPrimeiroGol)); });
-          getVotos(c.jogoId, "vencedor").then(v => { setTotalV(v.length); setResumoV(calcularResumo(v, [{ nome: c.timeA }, { nome: c.timeB }], c.resultadoVencedor)); });
-        }
-      }
-    });
-  }, []);
-
-  const save = async () => { setLoading(true); await saveConfigAposta(config); setLoading(false); setSaved(true); setTimeout(() => setSaved(false), 2000); };
-  const novoJogo = () => { setConfig({ ...emptyConfig, jogoId: `jogo_${Date.now()}`, ativo: true }); setResumoPG([]); setResumoV([]); setTotalPG(0); setTotalV(0); };
-  const encerrar = async () => {
-    if (!pg || !vc) return;
-    const u = { ...config, encerrado: true, resultadoPrimeiroGol: pg, resultadoVencedor: vc };
-    setConfig(u); await saveConfigAposta(u); setSaved(true); setTimeout(() => setSaved(false), 2000); setShowEncerrar(false);
-  };
-
-  const todosJogadores = [...(config.jogadoresTimeA||[]).map(j => ({ nome: j, time: config.timeA })), ...(config.jogadoresTimeB||[]).map(j => ({ nome: j, time: config.timeB }))];
-
-  return (
-    <div className="bg-[#151515] border border-[#222] rounded-2xl p-6 mb-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-white font-black text-xl uppercase flex items-center gap-2" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}>🍺 Apostas do Jogo</h2>
-        <button onClick={novoJogo} className="bg-[#222] hover:bg-[#333] border border-[#444] text-white text-xs font-bold uppercase px-4 py-2 rounded-lg transition-colors">+ Novo Jogo</button>
-      </div>
-
-      {!config.jogoId ? <p className="text-[#555] text-sm">Clique em "+ Novo Jogo" para configurar as apostas.</p> : <>
-        {/* Status */}
-        <div className="flex items-center gap-3 mb-6 p-3 bg-[#0D0D0D] rounded-xl border border-[#1C1C1C]">
-          <div className={`w-3 h-3 rounded-full ${config.encerrado ? "bg-[#555]" : config.ativo ? "bg-green-400 animate-pulse" : "bg-[#555]"}`} />
-          <span className="text-white text-sm font-semibold flex-1">{config.encerrado ? "Encerradas" : config.ativo ? "Apostas Abertas" : "Desativadas"}</span>
-          {!config.encerrado && <>
-            <button onClick={() => setConfig({ ...config, ativo: true })} className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg transition-colors ${config.ativo ? "bg-[#222] text-[#555]" : "bg-green-500/20 text-green-400 hover:bg-green-500/30"}`}>Ativar</button>
-            <button onClick={() => setConfig({ ...config, ativo: false })} className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg transition-colors ${!config.ativo ? "bg-[#222] text-[#555]" : "bg-red-600/20 text-red-400 hover:bg-red-600/30"}`}>Pausar</button>
-          </>}
-        </div>
-
-        {!config.encerrado && <div className="space-y-5 mb-6">
-          {/* Valor */}
-          <div>
-            <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Valor da Aposta (R$)</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#555] text-sm font-bold">R$</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="5,00"
-                defaultValue={config.valorAposta ? config.valorAposta.toFixed(2).replace(".", ",") : ""}
-                key={config.jogoId}
-                onBlur={e => {
-                  const raw = e.target.value.replace(/[^\d,\.]/g, "").replace(",", ".");
-                  const num = parseFloat(raw) || 0;
-                  e.target.value = num.toFixed(2).replace(".", ",");
-                  setConfig({ ...config, valorAposta: num });
-                }}
-                className="w-full bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none transition-colors"
-              />
-            </div>
-            <p className="text-[#444] text-xs mt-1">Ex: 5,00 · 10,50 · 20,00</p>
-          </div>
-
-          {/* Times */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">🔴 Nome do Time A</label>
-              <input value={config.timeA} onChange={e => setConfig({ ...config, timeA: e.target.value })} placeholder="Ex: Azulão" className="w-full bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
-            </div>
-            <div>
-              <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">🔵 Nome do Time B</label>
-              <input value={config.timeB} onChange={e => setConfig({ ...config, timeB: e.target.value })} placeholder="Ex: Verdão" className="w-full bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
-            </div>
-          </div>
-
-          {/* Jogadores Time A */}
-          <div>
-            <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">🔴 Jogadores do {config.timeA || "Time A"} ({(config.jogadoresTimeA||[]).length})</label>
-            <div className="flex gap-2 mb-2">
-              <input value={novoJA} onChange={e => setNovoJA(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { if (novoJA.trim()) { setConfig({ ...config, jogadoresTimeA: [...(config.jogadoresTimeA||[]), novoJA.trim()] }); setNovoJA(""); } } }}
-                placeholder="Nome do jogador" className="flex-1 bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
-              <button onClick={() => { if (novoJA.trim()) { setConfig({ ...config, jogadoresTimeA: [...(config.jogadoresTimeA||[]), novoJA.trim()] }); setNovoJA(""); } }} className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 rounded-lg">+ Add</button>
-            </div>
-            <div className="flex flex-wrap gap-2">{(config.jogadoresTimeA||[]).map((j, i) => <span key={i} className="flex items-center gap-1.5 bg-red-600/10 border border-red-600/30 text-red-400 text-xs px-3 py-1.5 rounded-full">{j}<button onClick={() => setConfig({ ...config, jogadoresTimeA: (config.jogadoresTimeA||[]).filter((_, idx) => idx !== i) })} className="hover:text-white ml-1">×</button></span>)}</div>
-          </div>
-
-          {/* Jogadores Time B */}
-          <div>
-            <label className="text-[#666] text-xs uppercase tracking-widest block mb-2">🔵 Jogadores do {config.timeB || "Time B"} ({(config.jogadoresTimeB||[]).length})</label>
-            <div className="flex gap-2 mb-2">
-              <input value={novoJB} onChange={e => setNovoJB(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { if (novoJB.trim()) { setConfig({ ...config, jogadoresTimeB: [...(config.jogadoresTimeB||[]), novoJB.trim()] }); setNovoJB(""); } } }}
-                placeholder="Nome do jogador" className="flex-1 bg-[#0D0D0D] border border-[#333] focus:border-red-600 rounded-lg px-4 py-2.5 text-white text-sm outline-none transition-colors" />
-              <button onClick={() => { if (novoJB.trim()) { setConfig({ ...config, jogadoresTimeB: [...(config.jogadoresTimeB||[]), novoJB.trim()] }); setNovoJB(""); } }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-4 rounded-lg">+ Add</button>
-            </div>
-            <div className="flex flex-wrap gap-2">{(config.jogadoresTimeB||[]).map((j, i) => <span key={i} className="flex items-center gap-1.5 bg-blue-600/10 border border-blue-600/30 text-blue-400 text-xs px-3 py-1.5 rounded-full">{j}<button onClick={() => setConfig({ ...config, jogadoresTimeB: (config.jogadoresTimeB||[]).filter((_, idx) => idx !== i) })} className="hover:text-white ml-1">×</button></span>)}</div>
-          </div>
-        </div>}
-
-        {/* Votos em tempo real */}
-        {(totalPG > 0 || totalV > 0) && <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-[#0D0D0D] rounded-xl border border-[#1C1C1C] p-4">
-            <p className="text-[#555] text-xs uppercase tracking-widest mb-3">⚽ Primeiro Gol — {totalPG} votos · Pote: R$ {(totalPG * config.valorAposta).toFixed(2).replace(".", ",")}</p>
-            <div className="space-y-2">{resumoPG.map(r => <div key={r.voto} className="flex items-center justify-between"><div><span className={`text-sm ${r.acertou ? "text-[#F5C518] font-bold" : "text-white"}`}>{r.voto}</span>{r.time && <span className="text-[#444] text-xs ml-2">({r.time})</span>}</div><div className="flex items-center gap-2"><div className="w-16 bg-[#222] rounded-full h-1.5"><div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${r.percentual}%` }} /></div><span className="text-[#555] text-xs w-8 text-right">{r.percentual}%</span></div></div>)}</div>
-          </div>
-          <div className="bg-[#0D0D0D] rounded-xl border border-[#1C1C1C] p-4">
-            <p className="text-[#555] text-xs uppercase tracking-widest mb-3">🏆 Vencedor — {totalV} votos · Pote: R$ {(totalV * config.valorAposta).toFixed(2).replace(".", ",")}</p>
-            <div className="space-y-2">{resumoV.map(r => <div key={r.voto} className="flex items-center justify-between"><span className={`text-sm ${r.acertou ? "text-[#F5C518] font-bold" : "text-white"}`}>{r.voto}</span><div className="flex items-center gap-2"><div className="w-16 bg-[#222] rounded-full h-1.5"><div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${r.percentual}%` }} /></div><span className="text-[#555] text-xs w-8 text-right">{r.percentual}%</span></div></div>)}</div>
-          </div>
-        </div>}
-
-        {/* Encerrar */}
-        {config.ativo && !config.encerrado && !showEncerrar && (
-          <button onClick={() => setShowEncerrar(true)} className="w-full border border-dashed border-[#444] hover:border-[#F5C518] text-[#555] hover:text-[#F5C518] text-sm font-semibold py-3 rounded-xl transition-colors mb-4">🏁 Encerrar e registrar resultado</button>
-        )}
-        {showEncerrar && <div className="bg-[#0D0D0D] border border-[#F5C518]/30 rounded-xl p-5 space-y-4 mb-4">
-          <p className="text-[#F5C518] text-sm font-bold uppercase tracking-widest">🏁 Registrar Resultado</p>
-          <div>
-            <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Quem fez o primeiro gol?</label>
-            <select value={pg} onChange={e => setPg(e.target.value)} className="w-full bg-[#151515] border border-[#333] rounded-lg px-4 py-2.5 text-white text-sm outline-none">
-              <option value="">Selecione...</option>
-              {todosJogadores.map(j => <option key={j.nome} value={j.nome}>{j.nome} ({j.time})</option>)}
-              <option value="Ninguém">Ninguém (0 x 0)</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Quem venceu?</label>
-            <select value={vc} onChange={e => setVc(e.target.value)} className="w-full bg-[#151515] border border-[#333] rounded-lg px-4 py-2.5 text-white text-sm outline-none">
-              <option value="">Selecione...</option>
-              <option value={config.timeA}>{config.timeA}</option>
-              <option value={config.timeB}>{config.timeB}</option>
-            </select>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={encerrar} disabled={!pg || !vc} className="flex-1 bg-[#F5C518] hover:bg-yellow-400 disabled:opacity-50 text-black font-black uppercase text-xs py-3 rounded-lg">Confirmar</button>
-            <button onClick={() => setShowEncerrar(false)} className="px-4 bg-[#222] hover:bg-[#333] text-[#888] text-xs font-bold uppercase rounded-lg">Cancelar</button>
-          </div>
-        </div>}
-
-        {!config.encerrado && <div className="flex items-center gap-4">
-          <button onClick={save} disabled={loading} className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold uppercase tracking-widest text-xs px-6 py-3 rounded-lg">{loading ? "Salvando..." : "Salvar Apostas"}</button>
-          {saved && <span className="text-green-500 text-sm">✓ Salvo!</span>}
-        </div>}
-      </>}
-    </div>
-  );
-}
-
 
 // ─── Última Entrevista ─────────────────────────────────────────────────────────
 function ResenhaSection() {
@@ -265,8 +103,8 @@ function HighlightsSection() {
   const vRef=useRef<HTMLInputElement>(null);
   const load=()=>getHighlights().then(setList);
   useEffect(()=>{load();},[]);
-  const handleAdd=async(e:React.FormEvent)=>{e.preventDefault();if(list.length>=6){alert("Máximo 6");return;}setLoading(true);let f={...form};if(!useYt&&vf){setProg(1);const r=await uploadToCloudinary(vf,setProg);f={...f,videoUrl:r.url,youtubeId:""};}await addHighlight(f);setForm({title:"",date:"",youtubeId:"",videoUrl:"",description:""});setVf(null);setProg(0);await load();setLoading(false);};
-  return <Section title={`Melhores Momentos (${list.length}/6)`} emoji="🎯">
+  const handleAdd=async(e:React.FormEvent)=>{e.preventDefault();if(list.length>=4){alert("Máximo 4");return;}setLoading(true);let f={...form};if(!useYt&&vf){setProg(1);const r=await uploadToCloudinary(vf,setProg);f={...f,videoUrl:r.url,youtubeId:""};}await addHighlight(f);setForm({title:"",date:"",youtubeId:"",videoUrl:"",description:""});setVf(null);setProg(0);await load();setLoading(false);};
+  return <Section title={`Melhores Momentos (${list.length}/4)`} emoji="🎯">
     <div className="flex gap-3 mb-6">{["youtube","upload"].map(m=><button key={m} type="button" onClick={()=>setUseYt(m==="youtube")} className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase border transition-colors ${(m==="youtube")===useYt?"bg-red-600 border-red-600 text-white":"bg-transparent border-[#333] text-[#666]"}`}>{m==="youtube"?"📺 YouTube":"📱 Celular"}</button>)}</div>
     <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 pb-8 border-b border-[#222]">
       <Input label="Título" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} required/>
@@ -274,7 +112,7 @@ function HighlightsSection() {
       {useYt?<div className="md:col-span-2"><Input label="ID do YouTube" value={form.youtubeId||""} onChange={e=>setForm({...form,youtubeId:e.target.value})} placeholder="Ex: ABC123xyz" required={useYt}/></div>
         :<div className="md:col-span-2"><UploadArea label="Vídeo" accept="video/*" onChange={f=>setVf(f?.[0]||null)} inputRef={vRef} preview={null}/>{vf&&<p className="text-red-400 text-xs mt-1">✓ {vf.name}</p>}<ProgressBar pct={prog} label={`Enviando... ${prog}%`}/></div>}
       <div className="md:col-span-2"><Textarea label="Descrição" value={form.description} rows={2} onChange={e=>setForm({...form,description:e.target.value})}/></div>
-      <div><SaveBtn loading={loading} label={list.length>=6?"Limite atingido":"Adicionar"}/></div>
+      <div><SaveBtn loading={loading} label={list.length>=4?"Limite atingido":"Adicionar"}/></div>
     </form>
     <div className="space-y-3">{list.length===0&&<p className="text-[#555] text-sm">Nenhum highlight.</p>}{list.map(h=><div key={h.id} className="flex items-center justify-between bg-[#0D0D0D] rounded-lg px-4 py-3 border border-[#1C1C1C]"><div><p className="text-white font-semibold text-sm">{h.title}</p><p className="text-[#555] text-xs">{h.date}</p></div><button onClick={()=>{if(confirm("Remover?"))deleteHighlight(h.id!).then(load);}} className="text-red-500 hover:text-red-400 text-xs font-bold uppercase">Remover</button></div>)}</div>
   </Section>;
@@ -355,25 +193,6 @@ function NextMatchSection() {
   </form></Section>;
 }
 
-// ─── Patrocinadores ────────────────────────────────────────────────────────────
-function SponsorsSection() {
-  const [list,setList]=useState<Sponsor[]>([]); const [form,setForm]=useState<Omit<Sponsor,"id">>({name:"",tagline:"",contact:"",logoText:"",color:"#dc2626"}); const [loading,setLoading]=useState(false);
-  const load=()=>getSponsors().then(setList);
-  useEffect(()=>{load();},[]);
-  const handleAdd=async(e:React.FormEvent)=>{e.preventDefault();setLoading(true);await addSponsor(form);setForm({name:"",tagline:"",contact:"",logoText:"",color:"#dc2626"});await load();setLoading(false);};
-  return <Section title="Patrocinadores" emoji="🤝">
-    <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 pb-8 border-b border-[#222]">
-      <Input label="Nome" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/>
-      <Input label="Slogan" value={form.tagline} onChange={e=>setForm({...form,tagline:e.target.value})}/>
-      <Input label="Contato" value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})}/>
-      <Input label="Iniciais" value={form.logoText} maxLength={3} onChange={e=>setForm({...form,logoText:e.target.value.toUpperCase()})} required/>
-      <div><label className="text-[#666] text-xs uppercase tracking-widest block mb-1">Cor</label><input type="color" value={form.color} onChange={e=>setForm({...form,color:e.target.value})} className="w-full h-10 rounded-lg border border-[#333] bg-[#0D0D0D] cursor-pointer"/></div>
-      <div className="flex items-end"><SaveBtn loading={loading} label="Adicionar"/></div>
-    </form>
-    <div className="space-y-3">{list.length===0&&<p className="text-[#555] text-sm">Nenhum.</p>}{list.map(s=><div key={s.id} className="flex items-center justify-between bg-[#0D0D0D] rounded-lg px-4 py-3 border border-[#1C1C1C]"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-white text-sm" style={{backgroundColor:s.color}}>{s.logoText}</div><div><p className="text-white font-semibold text-sm">{s.name}</p><p className="text-[#555] text-xs">{s.tagline}</p></div></div><button onClick={()=>{if(confirm("Remover?"))deleteSponsor(s.id!).then(load);}} className="text-red-500 hover:text-red-400 text-xs font-bold uppercase">Remover</button></div>)}</div>
-  </Section>;
-}
-
 // ─── Página principal ──────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [authed,setAuthed]=useState(false); const [checked,setChecked]=useState(false);
@@ -387,14 +206,12 @@ export default function AdminPage() {
         <div className="flex items-center gap-4"><a href="/" className="text-[#555] hover:text-white text-sm transition-colors">← Ver Site</a><button onClick={()=>{sessionStorage.removeItem("admin_auth");setAuthed(false);}} className="text-[#555] hover:text-red-400 text-sm transition-colors">Sair</button></div>
       </div>
       <ConfigSection/>
-      <ApostasSection/>
       <ResenhaSection/>
       <HighlightsSection/>
       <InterviewsSection/>
       <FeaturedPhotoSection/>
       <GallerySection/>
       <NextMatchSection/>
-      <SponsorsSection/>
     </div>
   </div>;
 }
