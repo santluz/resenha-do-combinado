@@ -212,11 +212,12 @@ function ResenhaSection() {
   const [data,setData]=useState<LatestResenha>({youtubeId:"",title:"",date:"",description:"",matchStats:{goals:"",opponent:"",location:""}});
   const [videoFile,setVideoFile]=useState<File|null>(null); const [progress,setProgress]=useState(0); const [loading,setLoading]=useState(false); const [saved,setSaved]=useState(false); const [useYt,setUseYt]=useState(true); const [deleting,setDeleting]=useState(false);
   const videoRef=useRef<HTMLInputElement>(null);
-  const load = () => getLatestResenha().then(r=>{if(r){setData(r);setUseYt(!r.videoUrl);}});
-  useEffect(()=>{load();},[]);
-  const handleSubmit=async(e:React.FormEvent)=>{e.preventDefault();setLoading(true);let d={...data};if(!useYt&&videoFile){setProgress(1);const r=await uploadToCloudinary(videoFile,setProgress);d={...d,youtubeId:"",videoUrl:r.url};}await saveResenha(d,(d as any).id);setProgress(0);setVideoFile(null);setLoading(false);setSaved(true);setTimeout(()=>setSaved(false),2000);};
-  const handleDelete=async()=>{if(!confirm("Remover esta entrevista?"))return;if(!(data as any).id)return;setDeleting(true);await deleteResenha((data as any).id);setData({youtubeId:"",title:"",date:"",description:"",matchStats:{goals:"",opponent:"",location:""}});setDeleting(false);setSaved(true);setTimeout(()=>setSaved(false),2000);};
-  const temConteudo = !!(data as any).id;
+  const [resenhaId, setResenhaId] = useState<string | null>(null);
+  const load = () => getLatestResenha().then(r => { if (r) { setData(r); setUseYt(!r.videoUrl); setResenhaId((r as any).id || null); } });
+  useEffect(() => { load(); }, []);
+  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); setLoading(true); let d = { ...data }; if (!useYt && videoFile) { setProgress(1); const r = await uploadToCloudinary(videoFile, setProgress); d = { ...d, youtubeId: "", videoUrl: r.url }; } await saveResenha(d, resenhaId || undefined); setProgress(0); setVideoFile(null); setLoading(false); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const handleDelete = async () => { if (!confirm("Remover esta entrevista?")) return; if (!resenhaId) { alert("ID não encontrado. Tente recarregar a página."); return; } setDeleting(true); await deleteResenha(resenhaId); setData({ youtubeId: "", title: "", date: "", description: "", matchStats: { goals: "", opponent: "", location: "" } }); setResenhaId(null); setDeleting(false); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const temConteudo = !!resenhaId;
   return <Section title="Última Entrevista" emoji="🎬">
     {/* Preview do vídeo atual */}
     {temConteudo && (

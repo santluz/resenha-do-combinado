@@ -24,7 +24,7 @@ export default async function Home() {
     getSiteConfig().catch(() => ({ instagram: "resenhadocombinado", logoUrl: undefined, comunicado: undefined, comunicadoAtivo: false })),
     getConfigAposta().catch(() => null),
   ]);
-  const resenhaData = resenha ?? (latestResenhaFallback as LRT);
+  const resenhaData = resenha?.title ? resenha : null;
   const nextMatchData = nextMatch ?? matchSponsorsFallback.nextMatch;
   const sponsorsData = sponsors.length > 0 ? sponsors : matchSponsorsFallback.sponsors;
   const instagram = siteConfig?.instagram || "resenhadocombinado";
@@ -36,7 +36,7 @@ export default async function Home() {
       {comunicado && <Comunicado texto={comunicado} />}
       <main>
         <HeroSection logoUrl={logoUrl} />
-        <LatestResenha data={resenhaData} />
+        {resenhaData && <LatestResenha data={resenhaData} />}
         {highlights.length > 0 && <Highlights highlights={highlights} />}
         {interviews.length > 0 && <InterviewsGrid interviews={interviews} />}
         {(gallery.length > 0 || featuredPhoto) && <GameGallery photos={gallery} featuredPhoto={featuredPhoto} />}
