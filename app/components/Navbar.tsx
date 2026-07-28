@@ -9,6 +9,7 @@ export default function Navbar({ instagram, logoUrl }: Props) {
   const links = [
     { label: "Última Entrevista", href: "#ultima-resenha" },
     { label: "Highlights", href: "#highlights" },
+    { label: "Árbitro 👁", href: "#arbitro" },
     { label: "Entrevistas", href: "#entrevistas" },
     { label: "Galeria", href: "#galeria" },
     { label: "Próximo Jogo", href: "#proximo-jogo" },

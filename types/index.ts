@@ -5,3 +5,12 @@ export interface GalleryPhoto { id?: string; src: string; alt: string; date: str
 export interface NextMatch { date: string; time: string; location: string; }
 export interface Sponsor { id?: string; name: string; tagline: string; contact: string; logoText: string; color: string; }
 export interface SiteConfig { instagram: string; logoUrl?: string; comunicado?: string; comunicadoAtivo?: boolean; }
+
+export interface ArbitroVideo {
+  id?: string;
+  title: string;
+  date: string;
+  videoUrl: string;
+  thumbnail?: string;
+  description?: string;
+}

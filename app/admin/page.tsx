@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { getLatestResenha, saveResenha, deleteResenha, getInterviews, addInterview, deleteInterview, getHighlights, addHighlight, deleteHighlight, getGallery, addPhoto, deletePhoto, getFeaturedPhoto, saveFeaturedPhoto, deleteFeaturedPhoto, getNextMatch, saveNextMatch, getSiteConfig, saveSiteConfig } from "@/lib/firestore";
+import { getLatestResenha, saveResenha, deleteResenha, getArbitroVideos, addArbitroVideo, deleteArbitroVideo, getInterviews, addInterview, deleteInterview, getHighlights, addHighlight, deleteHighlight, getGallery, addPhoto, deletePhoto, getFeaturedPhoto, saveFeaturedPhoto, deleteFeaturedPhoto, getNextMatch, saveNextMatch, getSiteConfig, saveSiteConfig } from "@/lib/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import type { Interview, Highlight, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
+import type { Interview, Highlight, ArbitroVideo, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
 
 function ProgressBar({ pct, label }: { pct: number; label?: string }) {
   if (pct <= 0 || pct >= 100) return null;
@@ -118,6 +118,74 @@ function HighlightsSection() {
   </Section>;
 }
 
+
+// ─── Visão do Árbitro (máx 2) ─────────────────────────────────────────────────
+function ArbitroSection() {
+  const [list, setList] = useState<ArbitroVideo[]>([]);
+  const [form, setForm] = useState<Omit<ArbitroVideo, "id">>({ title: "", date: "", videoUrl: "", description: "" });
+  const [vf, setVf] = useState<File | null>(null);
+  const [tf, setTf] = useState<File | null>(null);
+  const [tp, setTp] = useState<string | null>(null);
+  const [prog, setProg] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const vRef = useRef<HTMLInputElement>(null);
+  const tRef = useRef<HTMLInputElement>(null);
+  const load = () => getArbitroVideos().then(setList);
+  useEffect(() => { load(); }, []);
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (list.length >= 2) { alert("Máximo 2 vídeos do árbitro."); return; }
+    setLoading(true);
+    let f = { ...form };
+    if (vf) { setProg(1); const r = await uploadToCloudinary(vf, setProg); f = { ...f, videoUrl: r.url }; }
+    if (tf) { const r = await uploadToCloudinary(tf); f = { ...f, thumbnail: r.url }; }
+    await addArbitroVideo(f);
+    setForm({ title: "", date: "", videoUrl: "", description: "" });
+    setVf(null); setTf(null); setTp(null); setProg(0);
+    await load(); setLoading(false);
+  };
+  return (
+    <Section title={`Visão do Árbitro (${list.length}/2)`} emoji="👁">
+      <p className="text-[#555] text-sm -mt-4 mb-6">Vídeos verticais da câmera de ação no peito do árbitro.</p>
+      <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 pb-8 border-b border-[#222]">
+        <Input label="Título" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required placeholder="Ex: Árbitro — Jogo 15" />
+        <Input label="Data" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} required />
+        <div className="md:col-span-2">
+          <UploadArea label="Vídeo Vertical (câmera de ação)" accept="video/*" onChange={f => setVf(f?.[0] || null)} inputRef={vRef} preview={null} />
+          {vf && <p className="text-yellow-400 text-xs mt-1">✓ {vf.name}</p>}
+          <ProgressBar pct={prog} label={`Enviando... ${prog}%`} />
+        </div>
+        <div className="md:col-span-2">
+          <UploadArea label="Foto de Capa (opcional)" accept="image/*"
+            onChange={f => { setTf(f?.[0] || null); if (f?.[0]) setTp(URL.createObjectURL(f[0])); }}
+            inputRef={tRef} preview={tp} />
+        </div>
+        <div className="md:col-span-2">
+          <Textarea label="Descrição (opcional)" value={form.description || ""} rows={2}
+            onChange={e => setForm({ ...form, description: e.target.value })} />
+        </div>
+        <div><SaveBtn loading={loading} label={list.length >= 2 ? "Limite atingido (2/2)" : "Adicionar Vídeo"} /></div>
+      </form>
+      <div className="space-y-3">
+        {list.length === 0 && <p className="text-[#555] text-sm">Nenhum vídeo do árbitro cadastrado.</p>}
+        {list.map(v => (
+          <div key={v.id} className="flex items-center justify-between bg-[#0D0D0D] rounded-lg px-4 py-3 border border-[#1C1C1C]">
+            <div className="flex items-center gap-3">
+              {v.thumbnail && <img src={v.thumbnail} alt="" className="w-10 h-14 object-cover rounded" />}
+              <div>
+                <p className="text-white font-semibold text-sm">{v.title}</p>
+                <p className="text-[#555] text-xs">{v.date} · 📱 vertical</p>
+              </div>
+            </div>
+            <button onClick={() => { if (confirm("Remover?")) deleteArbitroVideo(v.id!).then(load); }}
+              className="text-red-500 hover:text-red-400 text-xs font-bold uppercase">Remover</button>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 // ─── Entrevistas ───────────────────────────────────────────────────────────────
 function InterviewsSection() {
   const [list,setList]=useState<Interview[]>([]); const [form,setForm]=useState<Omit<Interview,"id">>({name:"",role:"",date:"",thumbnail:"",youtubeId:"",description:""});
@@ -208,6 +276,7 @@ export default function AdminPage() {
       <ConfigSection/>
       <ResenhaSection/>
       <HighlightsSection/>
+      <ArbitroSection/>
       <InterviewsSection/>
       <FeaturedPhotoSection/>
       <GallerySection/>

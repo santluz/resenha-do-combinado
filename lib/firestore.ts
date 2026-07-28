@@ -1,6 +1,6 @@
 import { collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, setDoc, query, orderBy, limit, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Interview, Highlight, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
+import type { Interview, Highlight, ArbitroVideo, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
 export async function getSiteConfig(): Promise<SiteConfig> { try { const snap = await getDoc(doc(db, "config", "site")); if (!snap.exists()) return { instagram: "resenhadocombinado" }; return snap.data() as SiteConfig; } catch { return { instagram: "resenhadocombinado" }; } }
 export async function saveSiteConfig(data: SiteConfig) { await setDoc(doc(db, "config", "site"), { ...data, updatedAt: serverTimestamp() }); }
 export async function getLatestResenha(): Promise<LatestResenha | null> { const q = query(collection(db, "resenhas"), orderBy("date", "desc"), limit(1)); const snap = await getDocs(q); if (snap.empty) return null; const d = snap.docs[0]; return { id: d.id, ...d.data() } as LatestResenha; }
@@ -23,3 +23,7 @@ export async function saveNextMatch(data: NextMatch) { await setDoc(doc(db, "con
 export async function getSponsors(): Promise<Sponsor[]> { const snap = await getDocs(collection(db, "sponsors")); return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Sponsor)); }
 export async function addSponsor(data: Omit<Sponsor, "id">) { await addDoc(collection(db, "sponsors"), { ...data, createdAt: serverTimestamp() }); }
 export async function deleteSponsor(id: string) { await deleteDoc(doc(db, "sponsors", id)); }
+
+export async function getArbitroVideos(): Promise<ArbitroVideo[]> { const q = query(collection(db, "arbitro"), orderBy("date", "desc"), limit(2)); const snap = await getDocs(q); return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ArbitroVideo)); }
+export async function addArbitroVideo(data: Omit<ArbitroVideo, "id">) { await addDoc(collection(db, "arbitro"), { ...data, createdAt: serverTimestamp() }); }
+export async function deleteArbitroVideo(id: string) { await deleteDoc(doc(db, "arbitro", id)); }
