@@ -22,7 +22,7 @@ export default function HeroSection({ logoUrl }: Props) {
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
             Assistir Última Entrevista
           </button>
-          <a href="#apostas" className="inline-flex items-center border border-[#F5C518]/50 hover:border-[#F5C518] text-[#F5C518]/70 hover:text-[#F5C518] font-semibold uppercase tracking-widest text-sm px-8 py-4 rounded transition-all">🍺 Fazer Aposta</a>
+          <a href="#highlights" className="inline-flex items-center border border-[#333] hover:border-[#F5C518] text-[#A0A0A0] hover:text-[#F5C518] font-semibold uppercase tracking-widest text-sm px-8 py-4 rounded transition-all">Ver Highlights</a>
         </div>
       </div>
     </section>
