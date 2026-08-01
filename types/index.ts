@@ -14,3 +14,10 @@ export interface ArbitroVideo {
   thumbnail?: string;
   description?: string;
 }
+
+export interface Carrossel3DFoto {
+  id?: string;
+  src: string;
+  alt: string;
+  date: string;
+}

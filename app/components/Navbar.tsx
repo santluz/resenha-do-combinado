@@ -12,6 +12,7 @@ export default function Navbar({ instagram, logoUrl }: Props) {
     { label: "Árbitro 👁", href: "#arbitro" },
     { label: "Entrevistas", href: "#entrevistas" },
     { label: "Galeria", href: "#galeria" },
+    { label: "Galeria 3D 🌀", href: "#carrossel3d" },
     { label: "Próximo Jogo", href: "#proximo-jogo" },
   ];
   return (

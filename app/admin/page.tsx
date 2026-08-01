@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { getLatestResenha, saveResenha, deleteResenha, getArbitroVideos, addArbitroVideo, deleteArbitroVideo, getInterviews, addInterview, deleteInterview, getHighlights, addHighlight, deleteHighlight, getGallery, addPhoto, deletePhoto, getFeaturedPhoto, saveFeaturedPhoto, deleteFeaturedPhoto, getNextMatch, saveNextMatch, getSiteConfig, saveSiteConfig } from "@/lib/firestore";
+import { getLatestResenha, saveResenha, deleteResenha, getArbitroVideos, addArbitroVideo, deleteArbitroVideo, getCarrossel3D, addCarrossel3DFoto, deleteCarrossel3DFoto, getInterviews, addInterview, deleteInterview, getHighlights, addHighlight, deleteHighlight, getGallery, addPhoto, deletePhoto, getFeaturedPhoto, saveFeaturedPhoto, deleteFeaturedPhoto, getNextMatch, saveNextMatch, getSiteConfig, saveSiteConfig } from "@/lib/firestore";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import type { Interview, Highlight, ArbitroVideo, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
+import type { Interview, Highlight, ArbitroVideo, Carrossel3DFoto, LatestResenha, GalleryPhoto, NextMatch, Sponsor, SiteConfig } from "@/types";
 
 function ProgressBar({ pct, label }: { pct: number; label?: string }) {
   if (pct <= 0 || pct >= 100) return null;
@@ -229,6 +229,55 @@ function FeaturedPhotoSection() {
   </Section>;
 }
 
+
+// ─── Galeria 3D ────────────────────────────────────────────────────────────────
+function Carrossel3DSection() {
+  const [fotos, setFotos] = useState<Carrossel3DFoto[]>([]);
+  const [files, setFiles] = useState<FileList | null>(null);
+  const [alt, setAlt] = useState("");
+  const [prog, setProg] = useState(0);
+  const [cur, setCur] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLInputElement>(null);
+  const load = () => getCarrossel3D().then(setFotos);
+  useEffect(() => { load(); }, []);
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!files || files.length === 0) return;
+    setLoading(true);
+    for (let i = 0; i < files.length; i++) {
+      setCur(i + 1); setProg(0);
+      const r = await uploadToCloudinary(files[i], setProg);
+      await addCarrossel3DFoto({ src: r.url, alt: alt || `Foto ${i + 1}`, date: new Date().toISOString().split("T")[0] });
+    }
+    setAlt(""); setFiles(null); setProg(0); setCur(0);
+    if (ref.current) ref.current.value = "";
+    await load(); setLoading(false);
+  };
+  return (
+    <Section title={`Galeria 3D (${fotos.length} fotos)`} emoji="🌀">
+      <p className="text-[#555] text-sm -mt-4 mb-6">Fotos que aparecem no carrossel 3D giratório. Quanto mais fotos, mais legal fica!</p>
+      <form onSubmit={handleUpload} className="grid grid-cols-1 gap-4 mb-6 pb-6 border-b border-[#222]">
+        <UploadArea label="Fotos para o Carrossel 3D (pode selecionar várias)" accept="image/*" multiple onChange={f => setFiles(f)} inputRef={ref} preview={null} />
+        {files && files.length > 0 && <p className="text-red-400 text-sm">✓ {files.length} foto{files.length > 1 ? "s" : ""} selecionada{files.length > 1 ? "s" : ""}</p>}
+        {loading && <ProgressBar pct={prog} label={`Enviando foto ${cur} de ${files?.length}... ${prog}%`} />}
+        <Input label="Legenda (opcional)" value={alt} onChange={e => setAlt(e.target.value)} placeholder="Ex: Melhor jogo da temporada!" />
+        <div><SaveBtn loading={loading} label={loading ? `Enviando ${cur}/${files?.length}...` : "Adicionar ao Carrossel"} /></div>
+      </form>
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+        {fotos.map(f => (
+          <div key={f.id} className="relative group aspect-square rounded-lg overflow-hidden bg-[#0D0D0D]">
+            <img src={f.src} alt={f.alt} className="w-full h-full object-cover" />
+            <button onClick={() => { if (confirm("Remover do carrossel?")) deleteCarrossel3DFoto(f.id!).then(load); }}
+              className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-red-400 text-xs font-bold">Remover</button>
+          </div>
+        ))}
+        {fotos.length === 0 && <p className="text-[#555] text-sm col-span-full">Nenhuma foto no carrossel ainda.</p>}
+      </div>
+    </Section>
+  );
+}
+
 // ─── Galeria ───────────────────────────────────────────────────────────────────
 function GallerySection() {
   const [photos,setPhotos]=useState<GalleryPhoto[]>([]); const [files,setFiles]=useState<FileList|null>(null); const [alt,setAlt]=useState(""); const [prog,setProg]=useState(0); const [cur,setCur]=useState(0); const [loading,setLoading]=useState(false);
@@ -280,6 +329,7 @@ export default function AdminPage() {
       <InterviewsSection/>
       <FeaturedPhotoSection/>
       <GallerySection/>
+      <Carrossel3DSection/>
       <NextMatchSection/>
     </div>
   </div>;
