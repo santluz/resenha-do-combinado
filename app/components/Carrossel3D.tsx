@@ -1,6 +1,6 @@
 "use client";
 // components/Carrossel3D.tsx
-// Carrossel 3D giratório automático — fotos dispostas em cilindro
+// Carrossel 3D giratório suave — fotos dispostas em cilindro
 
 import { useState, useEffect, useRef } from "react";
 import type { Carrossel3DFoto } from "@/types";
@@ -11,29 +11,35 @@ export default function Carrossel3D({ fotos }: Props) {
   const [angulo, setAngulo] = useState(0);
   const [pausado, setPausado] = useState(false);
   const [fotoAtiva, setFotoAtiva] = useState<Carrossel3DFoto | null>(null);
-  const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const anguloRef = useRef(0);
 
   const total = fotos.length;
-  // Ângulo entre cada foto no cilindro
   const passo = total > 0 ? 360 / total : 0;
-  // Raio do cilindro baseado na quantidade de fotos
-  const raio = Math.max(280, total * 80);
+  // Raio maior para fotos mais espaçadas
+  const raio = Math.max(320, total * 90);
 
   useEffect(() => {
-    if (pausado || total === 0) return;
-    animRef.current = setInterval(() => {
-      setAngulo(a => a + 0.4);
-    }, 16); // ~60fps
-    return () => { if (animRef.current) clearInterval(animRef.current); };
+    if (total === 0) return;
+    const girar = () => {
+      if (!pausado) {
+        // Velocidade muito lenta — 0.1 grau por frame (~6 graus/segundo)
+        anguloRef.current += 0.1;
+        setAngulo(anguloRef.current);
+      }
+      rafRef.current = requestAnimationFrame(girar);
+    };
+    rafRef.current = requestAnimationFrame(girar);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [pausado, total]);
 
   if (total === 0) return null;
 
   return (
-    <section id="carrossel3d" className="bg-[#111] py-20 px-6 overflow-hidden">
+    <section id="carrossel3d" className="bg-[#0D0D0D] py-20 px-6 overflow-hidden">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-16">
+        <div className="flex items-center gap-4 mb-4">
           <span className="text-red-500 text-sm font-black uppercase tracking-[0.3em]"
             style={{ fontFamily: "'Bebas Neue', Impact, sans-serif", fontSize: "1rem" }}>
             🌀 Galeria 3D
@@ -41,74 +47,68 @@ export default function Carrossel3D({ fotos }: Props) {
           <div className="flex-1 h-px bg-[#222]" />
           <span className="text-xs text-[#333] uppercase">{total} fotos</span>
         </div>
+        <p className="text-[#555] text-sm mb-12">Passe o mouse para pausar · Clique para ampliar</p>
 
         {/* Palco 3D */}
         <div
-          className="relative mx-auto select-none"
-          style={{ height: "420px", perspective: "1200px" }}
+          className="relative mx-auto cursor-pointer"
+          style={{ height: "380px", perspective: "1000px" }}
           onMouseEnter={() => setPausado(true)}
           onMouseLeave={() => setPausado(false)}
-          onTouchStart={() => setPausado(true)}
-          onTouchEnd={() => setTimeout(() => setPausado(false), 2000)}
+          onTouchStart={() => setPausado(p => !p)}
         >
-          {/* Cilindro giratório */}
+          {/* Cilindro */}
           <div
             className="absolute inset-0 flex items-center justify-center"
             style={{
               transformStyle: "preserve-3d",
               transform: `rotateY(${angulo}deg)`,
-              transition: pausado ? "transform 0.3s ease" : "none",
             }}
           >
             {fotos.map((foto, i) => {
               const anguloFoto = passo * i;
+              // Calcular visibilidade — fotos de frente ficam mais brilhantes
+              const anguloRelativo = ((anguloFoto + angulo) % 360 + 360) % 360;
+              const visibilidade = Math.cos((anguloRelativo * Math.PI) / 180);
+              const escala = 0.75 + (visibilidade + 1) / 2 * 0.35;
+
               return (
                 <div
                   key={foto.id || i}
-                  className="absolute cursor-pointer"
+                  className="absolute"
                   style={{
                     transform: `rotateY(${anguloFoto}deg) translateZ(${raio}px)`,
                     transformStyle: "preserve-3d",
-                    width: "220px",
-                    height: "300px",
+                    width: "200px",
+                    height: "280px",
+                    scale: String(escala),
                   }}
                   onClick={() => setFotoAtiva(foto)}
                 >
-                  <div className="w-full h-full rounded-xl overflow-hidden border-2 border-white/10 hover:border-red-500/60 transition-all duration-300 shadow-2xl hover:shadow-red-500/20 group">
+                  <div
+                    className="w-full h-full rounded-2xl overflow-hidden border border-white/10 hover:border-red-500/50 transition-colors duration-300"
+                    style={{
+                      // Sem box-shadow para evitar sombras indesejadas
+                      filter: `brightness(${0.5 + (visibilidade + 1) / 2 * 0.6})`,
+                    }}
+                  >
                     <img
                       src={foto.src}
                       alt={foto.alt}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      className="w-full h-full object-cover"
                       draggable={false}
                     />
-                    {/* Reflexo */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    {/* Legenda */}
+                    {/* Gradiente suave só na base */}
+                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
                     {foto.alt && (
-                      <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-white text-xs font-semibold text-center">{foto.alt}</p>
-                      </div>
+                      <p className="absolute bottom-2 left-0 right-0 text-center text-white text-xs font-semibold px-2 truncate">{foto.alt}</p>
                     )}
                   </div>
                 </div>
               );
             })}
           </div>
-
-          {/* Reflexo no chão */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
-            style={{
-              background: "linear-gradient(to top, #111 0%, transparent 100%)",
-              zIndex: 10,
-            }}
-          />
         </div>
-
-        {/* Dica */}
-        <p className="text-center text-[#333] text-xs mt-6 uppercase tracking-widest">
-          Passe o mouse para pausar · Clique para ampliar
-        </p>
       </div>
 
       {/* Lightbox */}
@@ -123,8 +123,7 @@ export default function Carrossel3D({ fotos }: Props) {
           </button>
           <div className="relative max-w-2xl w-full max-h-[85vh] rounded-2xl overflow-hidden"
             onClick={e => e.stopPropagation()}>
-            <img src={fotoAtiva.src} alt={fotoAtiva.alt}
-              className="w-full h-full object-contain" />
+            <img src={fotoAtiva.src} alt={fotoAtiva.alt} className="w-full h-full object-contain" />
             {fotoAtiva.alt && (
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                 <p className="text-white text-sm font-semibold text-center">{fotoAtiva.alt}</p>
@@ -136,3 +135,6 @@ export default function Carrossel3D({ fotos }: Props) {
     </section>
   );
 }
+
+interface Props { fotos: Carrossel3DFoto[]; }
+
