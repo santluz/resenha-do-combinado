@@ -9,8 +9,8 @@ export default function NextMatch({ match }: Props) {
         <div className="max-w-xl mx-auto bg-[#151515] border border-[#222] rounded-2xl overflow-hidden">
           <div className="h-1.5 bg-gradient-to-r from-red-600 via-[#F5C518] to-red-600" />
           <div className="p-8 flex flex-col gap-6">
-            {[{ icon: "📅", label: "Data", value: date }, { icon: "🕐", label: "Horário", value: match.time + "h" }, { icon: "📍", label: "Local", value: match.location }].map((i) => (
-              <div key={i.label} className="flex items-center gap-4"><div className="w-12 h-12 rounded-full bg-red-600/10 border border-red-600/30 flex items-center justify-center text-xl">{i.icon}</div><div><p className="text-[#555] text-xs uppercase tracking-widest mb-0.5">{i.label}</p><p className="text-white font-semibold capitalize">{i.value}</p></div></div>
+            {[{icon:"📅",label:"Data",value:date},{icon:"🕐",label:"Horário",value:match.time+"h"},{icon:"📍",label:"Local",value:match.location}].map(i => (
+              <div key={i.label} className="flex items-center gap-4"><div className="w-12 h-12 rounded-full bg-red-600/10 border border-red-600/30 flex items-center justify-center text-xl flex-shrink-0">{i.icon}</div><div><p className="text-[#555] text-xs uppercase tracking-widest mb-0.5">{i.label}</p><p className="text-white font-semibold capitalize">{i.value}</p></div></div>
             ))}
           </div>
         </div>

@@ -5,7 +5,7 @@ export default function LatestResenha({ data }: Props) {
   return (
     <section id="ultima-resenha" className="bg-[#111] py-20 px-6">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-4 mb-12"><span className="text-red-500 text-sm font-black uppercase tracking-[0.3em]" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif", fontSize: "1rem" }}>🎙 Última Entrevista</span><div className="flex-1 h-px bg-[#222]" /><span className="text-xs text-[#444] uppercase tracking-widest">{date}</span></div>
+        <div className="flex items-center gap-4 mb-12"><span className="text-red-500 text-sm font-black uppercase tracking-[0.3em]" style={{ fontFamily: "'Bebas Neue', Impact, sans-serif", fontSize: "1rem" }}>🎙 Última Entrevista</span><div className="flex-1 h-px bg-[#222]" /><span className="text-xs text-[#444] uppercase">{date}</span></div>
         <div className="grid lg:grid-cols-5 gap-10 items-start">
           <div className="lg:col-span-3"><div className="relative w-full aspect-video rounded-lg overflow-hidden bg-[#0D0D0D] border border-[#222]">{data.videoUrl ? <video src={data.videoUrl} controls playsInline className="absolute inset-0 w-full h-full object-cover" /> : <iframe src={`https://www.youtube.com/embed/${data.youtubeId}?rel=0`} title={data.title} allowFullScreen className="absolute inset-0 w-full h-full" loading="lazy" />}</div></div>
           <div className="lg:col-span-2 flex flex-col justify-center">
